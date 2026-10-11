@@ -942,7 +942,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
     <section id="page-soldout" class="page-section hidden">
       <div class="hero">
         <h2>🚫 Rekap Sold Out</h2>
-        <p>Rekap item Sold Out berdasarkan store dan periode dari HISTORY BASE.</p>
+        <p>Rekap item Sold Out dari spreadsheet sumber berdasarkan store dan periode tanggal.</p>
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="form-grid">
@@ -959,7 +959,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
         <div class="stat"><div class="icon">🚨</div><div class="label">CRITICAL</div><div id="soCritical" class="value">0</div></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><h3>📋 Detail Rekap Sold Out</h3><div class="small">Sumber: HISTORY BASE · Data hanya dibaca, tidak mengubah sumber.</div></div><button class="btn btn-light" onclick="loadSoldOutSummary()">↻ Refresh</button></div>
+        <div class="card-head"><div><h3>📋 Detail Rekap Sold Out</h3><div class="small">Sumber: Spreadsheet Rekap Sold Out · Data hanya dibaca, tidak mengubah sumber.</div></div><button class="btn btn-light" onclick="loadSoldOutSummary()">↻ Refresh</button></div>
         <div class="table-wrap"><table><thead><tr><th>STORE</th><th>KODE MATERIAL</th><th>NAMA BARANG</th><th>TOTAL HARI SO</th><th>SO TERAKHIR</th><th>PERIODE SO</th><th>STREAK TERLAMA</th><th>PRIORITAS</th></tr></thead><tbody id="soldOutBody"><tr><td colspan="8" class="empty">Klik Tampilkan Rekap untuk memuat data.</td></tr></tbody></table></div>
       </div>
     </section>
