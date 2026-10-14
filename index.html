@@ -1740,24 +1740,37 @@ function renderWasteLatest(rows){
    HISTORY STORE - SEMUA MENU
 ========================================================= */
 function historyHeaderKey(header){
-  const h=String(header||'').trim().toUpperCase();
-  const map={
-    'ID':'id','TIMESTAMP':'timestamp','TANGGAL':'tanggal','TANGGAL SALES':'tanggal','STORE':'store','STORE NAME':'store','NAMA STORE':'store',
-    'DINE IN':'dineIn','DINE IN SALES':'dineIn','SALES DINE IN':'dineIn','TC DINE IN':'tcDineIn','DINE IN TC':'tcDineIn',
-    'DELIVERY':'delivery','DELIVERY SALES':'delivery','SALES DELIVERY':'delivery','TC DELIVERY':'tcDelivery','DELIVERY TC':'tcDelivery',
-    'TAKE AWAY':'takeAway','TAKE AWAY SALES':'takeAway','TAKEAWAY SALES':'takeAway','SALES TAKE AWAY':'takeAway','TC TAKE AWAY':'tcTakeAway','TAKE AWAY TC':'tcTakeAway','TAKEAWAY TC':'tcTakeAway',
-    'CONNECT / BO':'connectBO','CONNECT / BO SALES':'connectBO','CONNECT BO SALES':'connectBO','SALES CONNECT / BO':'connectBO','TC CONNECT / BO':'tcConnectBO','CONNECT / BO TC':'tcConnectBO',
-    'TIPS':'tips','TOTAL SALES':'totalSales','TOTAL TC':'totalTc','KETERANGAN':'keterangan','INPUT BY':'inputBy',
-    'NO SC':'noSC','NOMOR SC':'noSC','TANGGAL INPUT':'tanggalInput','TGL INPUT':'tanggalInput','TANGGAL KEJADIAN':'tanggalKejadian','TGL KEJADIAN':'tanggalKejadian',
-    'KATEGORI':'kategori','ITEM / ASSET':'itemAsset','ASSET':'itemAsset','JENIS KERUSAKAN':'jenisKerusakan','KERUSAKAN':'jenisKerusakan',
-    'PRIORITAS':'prioritas','FOTO BEFORE':'fotoBefore','STATUS':'status','TEKNISI / VENDOR':'teknisiVendor',
-    'TANGGAL PROGRESS':'tanggalProgress','FOTO PROGRESS':'fotoProgress','TINDAKAN':'tindakan',
-    'TANGGAL SELESAI':'tanggalSelesai','FOTO AFTER':'fotoAfter','KETERANGAN SELESAI':'keteranganSelesai',
-    'BULAN':'bulan','TAHUN':'tahun','TANGGAL UPLOAD':'tanggalUpload','TGL UPLOAD':'tanggalUpload','FILE NAME':'fileName','NAMA FILE':'fileName',
-    'DRIVE URL':'driveUrl','DRIVE FILE ID':'driveFileId','UPLOAD BY':'uploadBy'
+  // Normalisasi nama header API/Sheets termasuk nama properti camelCase.
+  const raw=String(header==null?'':header).trim();
+  const key=raw.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const aliases={
+    ID:'id', TIMESTAMP:'timestamp', CREATEDAT:'timestamp', UPDATEDAT:'updatedAt',
+    DATE:'tanggal', TANGGAL:'tanggal', TANGGALSALES:'tanggal', TANGGALINPUT:'tanggal', TGL:'tanggal', TGLINPUT:'tanggal',
+    STORE:'store', STORENAME:'store', NAMASTORE:'store', NAMATOKO:'store',
+    DINEIN:'dineIn', DINEINSALES:'dineIn', SALESDINEIN:'dineIn',
+    TCDINEIN:'tcDineIn', DINEINTC:'tcDineIn',
+    DELIVERY:'delivery', DELIVERYSALES:'delivery', SALESDELIVERY:'delivery',
+    DELIVERYTC:'tcDelivery', TCDELIVERY:'tcDelivery',
+    TAKEAWAY:'takeAway', TAKEAWAYSALES:'takeAway', SALESTAKEAWAY:'takeAway',
+    TCTAKEAWAY:'tcTakeAway', TAKEAWAYTC:'tcTakeAway',
+    CONNECTBO:'connectBO', CONNECTBOSALES:'connectBO', SALESCONNECTBO:'connectBO',
+    TCCONNECT:'tcConnect', TCCONNECTBO:'tcConnect', CONNECTBOTC:'tcConnect',
+    TIPS:'tips', TOTALSALES:'totalSales', TOTALTC:'totalTc', KETERANGAN:'keterangan', NOTES:'keterangan', INPUTBY:'inputBy'
   };
-  if(map[h]) return map[h];
-  return h.toLowerCase().replace(/[^a-z0-9]+(.)/g,(m,c)=>c.toUpperCase());
+  // Keys must not contain spaces after normalization; explicitly normalize common labels.
+  const cleanAliases={
+    ID:'id', TIMESTAMP:'timestamp', CREATEDAT:'timestamp', UPDATEDAT:'updatedAt',
+    DATE:'tanggal', TANGGAL:'tanggal', TANGGALSALES:'tanggal', TANGGALINPUT:'tanggal', TGL:'tanggal', TGLINPUT:'tanggal',
+    STORE:'store', STORENAME:'store', NAMASTORE:'store', NAMATOKO:'store',
+    DINEIN:'dineIn', DINEINSALES:'dineIn', SALESDINEIN:'dineIn', TCDINEIN:'tcDineIn', DINEINTC:'tcDineIn',
+    DELIVERY:'delivery', DELIVERYSALES:'delivery', SALESDELIVERY:'delivery',
+    TCDELIVERY:'tcDelivery', DELIVERYTC:'tcDelivery',
+    TAKEAWAY:'takeAway', TAKEAWAYSALES:'takeAway', SALESTAKEAWAY:'takeAway', TCTAKEAWAY:'tcTakeAway', TAKEAWAYTC:'tcTakeAway',
+    CONNECTBO:'connectBO', CONNECTBOSALES:'connectBO', SALESCONNECTBO:'connectBO', TCCONNECT:'tcConnect', TCCONNECTBO:'tcConnect', CONNECTBOTC:'tcConnect',
+    TIPS:'tips', TOTALSALES:'totalSales', TOTALTC:'totalTc', KETERANGAN:'keterangan', NOTES:'keterangan', INPUTBY:'inputBy'
+  };
+  if(cleanAliases[key]) return cleanAliases[key];
+  return raw.toLowerCase().replace(/[^a-z0-9]+(.)/g,(m,c)=>c.toUpperCase());
 }
 
 async function loadDirectDatabaseHistory(moduleName){
@@ -1772,7 +1785,16 @@ async function loadDirectDatabaseHistory(moduleName){
     headers.forEach((h,i)=>obj[historyHeaderKey(h)]=Array.isArray(row)?row[i]:row[h]);
     // Some databases use slightly different column labels; normalize store/date fields.
     if(!obj.store) obj.store=obj.storeName||obj.namaStore||obj.namaToko||'';
-    if(!obj.tanggal) obj.tanggal=obj.tanggalSales||obj.tanggalInput||obj.tgl||'';
+    if(!obj.tanggal) obj.tanggal=obj.tanggalSales||obj.tanggalInput||obj.tgl||obj.date||'';
+    // Alias compatibility for the existing API payload and older sheet headers.
+    if(obj.tcConnectBO===undefined) obj.tcConnectBO=obj.tcConnect===undefined?(obj.tcConnects||0):obj.tcConnect;
+    if(obj.takeAway===undefined) obj.takeAway=obj.takeaway===undefined?0:obj.takeaway;
+    if(obj.totalSales===undefined || obj.totalSales==='' || obj.totalSales===null) {
+      obj.totalSales=Number(obj.dineIn||0)+Number(obj.delivery||0)+Number(obj.takeAway||obj.takeaway||0)+Number(obj.connectBO||obj.connects||0);
+    }
+    if(obj.totalTc===undefined || obj.totalTc==='' || obj.totalTc===null) {
+      obj.totalTc=Number(obj.tcDineIn||0)+Number(obj.tcDelivery||0)+Number(obj.tcTakeAway||0)+Number(obj.tcConnectBO||0);
+    }
     return obj;
   }).reverse().slice(0,5000);
 }
