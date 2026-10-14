@@ -459,7 +459,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
             <option value="ALL">SEMUA STORE</option>
             <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
             <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-            <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+            <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
           </select>
         </div>
       </div>
@@ -491,7 +491,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
         <div class="card-head">
           <div>
             <h3>🏪 Ringkasan Semua Store</h3>
-            <div class="small">Seluruh akun Store dapat melihat data SKS GANDARIA CITY, SKS KEMANG SQUARE, dan SKS SENAYAN CITY.</div>
+            <div class="small">Seluruh akun Store dapat melihat data SKS GANDARIA CITY, SKS KEMANG SQUARE, dan SSS SENAYAN CITY.</div>
           </div>
           <button class="btn btn-light" onclick="loadDashboard()">↻ Refresh</button>
         </div>
@@ -561,7 +561,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
             </select>
           </div>
 
@@ -778,7 +778,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
             </select>
           </div>
           <div class="field">
@@ -860,7 +860,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
             </select>
           </div>
           <div class="field">
@@ -916,7 +916,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">ALL STORE</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
             </select>
           </div>
         </div>
@@ -946,7 +946,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="form-grid">
-          <div class="field"><label>FILTER STORE</label><select id="soStore"><option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option></select></div>
+          <div class="field"><label>FILTER STORE</label><select id="soStore"><option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option></select></div>
           <div class="field"><label>DARI TANGGAL</label><input id="soFrom" type="date"></div>
           <div class="field"><label>SAMPAI TANGGAL</label><input id="soTo" type="date"></div>
           <div class="field" style="display:flex;align-items:end"><button class="btn btn-primary" onclick="loadSoldOutSummary()">🔎 Tampilkan Rekap</button></div>
@@ -1015,7 +1015,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
             </select>
           </div>
           <div class="field">
@@ -1074,7 +1074,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
             <option value="ALL">SEMUA STORE</option>
             <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
             <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-            <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
+            <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
           </select>
           <input id="swSearch" placeholder="Cari ID / Store / Smallware / Jenis" oninput="renderSmallwareHistory()">
           <select id="swStatusFilter" onchange="renderSmallwareHistory()">
@@ -1180,11 +1180,11 @@ function canonicalStore(value){
   const key = raw.replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 
   if(
-    key === 'SKS SENAYAN CITY' ||
+    key === 'SSS SENAYAN CITY' ||
     key === 'SENAYAN CITY' ||
-    key === 'SKS SNC' ||
+    key === 'SSS SNC' ||
     key.includes('SENAYAN CITY')
-  ) return 'SKS SENAYAN CITY';
+  ) return 'SSS SENAYAN CITY';
 
   if(
     key === 'SKS GANDARIA CITY' ||
@@ -1654,7 +1654,7 @@ function initWastePage(){
     <option value="ALL">ALL STORE</option>
     <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
     <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-    <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>`;
+    <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>`;
 
   select.value = select.value || 'ALL';
   loadWasteDashboard();
@@ -2052,9 +2052,9 @@ function resetWaste(){
 async function saveMaintenance(){
   // Maintenance harus memakai store yang dipilih pada form, bukan store akun (bisa ALL).
   const targetStore=selectedStore('mtStore');
-  const validMaintenanceStores=['SKS GANDARIA CITY','SKS KEMANG SQUARE','SKS SENAYAN CITY'];
+  const validMaintenanceStores=['SKS GANDARIA CITY','SKS KEMANG SQUARE','SSS SENAYAN CITY'];
   if(!targetStore || !validMaintenanceStores.includes(targetStore)){
-    toast('Pilih Store Maintenance yang valid: SKS GANDARIA CITY, SKS KEMANG SQUARE, atau SKS SENAYAN CITY.');
+    toast('Pilih Store Maintenance yang valid: SKS GANDARIA CITY, SKS KEMANG SQUARE, atau SSS SENAYAN CITY.');
     return;
   }
 
@@ -2073,7 +2073,7 @@ async function saveMaintenance(){
       noSC,
       tanggalInput:$('mtInputDate').value,
       tanggalKejadian:$('mtIncidentDate').value,
-      store:targetStore, // Backend menerima store terpilih: SKS GANDARIA CITY / SKS KEMANG SQUARE / SKS SENAYAN CITY.
+      store:targetStore, // Backend menerima store terpilih: SKS GANDARIA CITY / SKS KEMANG SQUARE / SSS SENAYAN CITY.
       kategori:$('mtCategory').value,
       itemAsset:$('mtAsset').value.trim(),
       jenisKerusakan:$('mtDamage').value.trim(),
@@ -2263,7 +2263,7 @@ function initWalkthrough(){
       <option value="">ALL STORE</option>
       <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
       <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-      <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>`;
+      <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>`;
     filter.disabled = false;
   }
 
@@ -2610,9 +2610,9 @@ function prepareSmallwareStoreField(){
   select.innerHTML = `
     <option>SKS GANDARIA CITY</option>
     <option>SKS KEMANG SQUARE</option>
-    <option>SKS SENAYAN CITY</option>
+    <option>SSS SENAYAN CITY</option>
   `;
-  select.value = ['SKS GANDARIA CITY','SKS KEMANG SQUARE','SKS SENAYAN CITY'].includes(current) ? current : 'SKS GANDARIA CITY';
+  select.value = ['SKS GANDARIA CITY','SKS KEMANG SQUARE','SSS SENAYAN CITY'].includes(current) ? current : 'SKS GANDARIA CITY';
   el.replaceWith(select);
 }
 
@@ -3135,21 +3135,27 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 
-/* V16 scenic wallpaper: one landscape per 3-hour block, consistent for all visitors in that block. */
+/* V19: scenic wallpaper changes once per calendar day; same theme remains for the whole day. */
 (function initScenicBackground(){
   const scenicPhotos = [
     'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=2200&q=85',
     'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=2200&q=85',
     'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2200&q=85',
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85'
+    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85',
+    'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=2200&q=85',
+    'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=2200&q=85',
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2200&q=85'
   ];
   const applyScenic = () => {
-    const threeHourBlock = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
-    const url = scenicPhotos[threeHourBlock % scenicPhotos.length];
+    const now = new Date();
+    const dayKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+    const dayNumber = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
+    const url = scenicPhotos[((dayNumber % scenicPhotos.length) + scenicPhotos.length) % scenicPhotos.length];
     document.documentElement.style.setProperty('--scenic-image', `url("${url}")`);
+    document.documentElement.setAttribute('data-daily-theme', dayKey);
   };
   applyScenic();
-  window.setInterval(applyScenic, 60 * 1000);
+  window.setInterval(applyScenic, 60 * 60 * 1000);
 })();
 
 
@@ -3265,7 +3271,7 @@ function __addHistoryFilter(module,card){
   const labels={sales:'History Sales',waste:'History Waste',maintenance:'History Maintenance',kpi:'History KPI'};
   const box=document.createElement('div');box.className='module-history-filter';
   const label=document.createElement('label');label.textContent='FILTER STORE';label.htmlFor=module+'HistoryStoreFilter';
-  const select=document.createElement('select');select.id=module+'HistoryStoreFilter';select.innerHTML='<option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>';
+  const select=document.createElement('select');select.id=module+'HistoryStoreFilter';select.innerHTML='<option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>';
   select.addEventListener('change',()=>__filterHistoryRows(module));box.append(label,select);const tableWrap=card.querySelector('.table-wrap');if(tableWrap)card.insertBefore(box,tableWrap);else card.appendChild(box);
 }
 function __filterHistoryRows(module){
@@ -3441,6 +3447,58 @@ button:hover,.btn:hover{filter:brightness(.98);box-shadow:0 4px 12px rgba(47,70,
 /* Keep text contrast clear on light backgrounds */
 .card h1,.card h2,.card h3,.panel h1,.panel h2,.panel h3,
 .page-section h1,.page-section h2,.page-section h3{color:#293a50}
+</style>
+
+
+<style id="halimah-colorful-theme-v2">
+/* V19 COLORFUL FEMININE THEME — VISUAL ONLY; does not alter module logic or API calls. */
+:root{
+ --pink-main:#ec4899;--pink-deep:#9d174d;--lavender-main:#8b5cf6;--peach-main:#fb923c;
+ --mint-main:#10b981;--sky-main:#0ea5e9;--butter-main:#eab308;
+ --line:#f0dce9;--shadow:0 10px 28px rgba(131,65,112,.12);
+}
+body::before{
+ background-image:linear-gradient(135deg,rgba(255,239,248,.58),rgba(245,238,255,.48)),var(--scenic-image)!important;
+ background-size:cover;background-position:center;background-repeat:no-repeat;
+}
+body::after{background:rgba(255,246,251,.16)!important}
+.topbar{background:rgba(255,248,252,.88)!important;border-bottom-color:#f3d8e8!important}
+.logo{background:linear-gradient(135deg,#f9a8d4,#c4b5fd,#fdba74)!important;color:#6b214f}
+.userpill{background:#ffe4f1!important;color:#9d174d!important;border-color:#f9c5df!important}
+.card,.stat,.hero,.login-card,.module-menu-card,.panel,.module-content-panel{
+ border-color:rgba(255,255,255,.9)!important;box-shadow:0 9px 26px rgba(125,67,111,.10)
+}
+.hero{background:linear-gradient(135deg,rgba(255,228,242,.94),rgba(237,228,255,.94) 55%,rgba(255,239,220,.94))!important}
+.login-wrap{background:linear-gradient(135deg,rgba(255,228,242,.88),rgba(237,228,255,.88),rgba(255,239,220,.88))!important}
+/* Every action button has a visible color; common actions have consistent colors. */
+button,.btn{border-radius:12px!important;font-weight:750;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease}
+button:not(:disabled):hover,.btn:not(:disabled):hover{transform:translateY(-1px);filter:saturate(1.12);box-shadow:0 7px 16px rgba(125,67,111,.18)!important}
+button.btn-primary,.btn-primary{background:#dbeafe!important;color:#1d4ed8!important;border:1px solid #bfdbfe!important}
+button.btn-green,.btn-green{background:#d1fae5!important;color:#065f46!important;border:1px solid #a7f3d0!important}
+button.btn-purple,.btn-purple{background:#ede9fe!important;color:#6d28d9!important;border:1px solid #ddd6fe!important}
+button.btn-orange,.btn-orange{background:#ffedd5!important;color:#9a3412!important;border:1px solid #fed7aa!important}
+button.btn-peach,.btn-peach{background:#ffe4e6!important;color:#9f1239!important;border:1px solid #fecdd3!important}
+button.btn-danger,.btn-danger{background:#fee2e2!important;color:#991b1b!important;border:1px solid #fecaca!important}
+button.btn-light,.btn-light{background:#f3e8ff!important;color:#6b21a8!important;border:1px solid #e9d5ff!important}
+/* Neutral buttons also get color by action position, while preserving named button colors above. */
+button:not([class*="btn-"]):not(.active){background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8}
+#nav button:nth-child(8n+1){background:#fce7f3!important;color:#9d174d!important;border-color:#fbcfe8!important}
+#nav button:nth-child(8n+2){background:#ede9fe!important;color:#6d28d9!important;border-color:#ddd6fe!important}
+#nav button:nth-child(8n+3){background:#ffedd5!important;color:#9a3412!important;border-color:#fed7aa!important}
+#nav button:nth-child(8n+4){background:#d1fae5!important;color:#065f46!important;border-color:#a7f3d0!important}
+#nav button:nth-child(8n+5){background:#dbeafe!important;color:#1d4ed8!important;border-color:#bfdbfe!important}
+#nav button:nth-child(8n+6){background:#fef3c7!important;color:#92400e!important;border-color:#fde68a!important}
+#nav button:nth-child(8n+7){background:#ffe4e6!important;color:#9f1239!important;border-color:#fecdd3!important}
+#nav button:nth-child(8n){background:#cffafe!important;color:#155e75!important;border-color:#a5f3fc!important}
+#nav button.active{outline:2px solid rgba(236,72,153,.28)!important;outline-offset:1px;filter:saturate(1.2)}
+.module-menu-card.tone-green{background:#d1fae5!important}.module-menu-card.tone-blue{background:#dbeafe!important}.module-menu-card.tone-orange{background:#ffedd5!important}.module-menu-card.tone-peach{background:#ffe4e6!important}.module-menu-card.tone-purple{background:#ede9fe!important}.module-menu-card.tone-cyan{background:#cffafe!important}.module-menu-card.tone-pink{background:#fce7f3!important}
+input:focus,select:focus,textarea:focus{border-color:#f472b6!important;box-shadow:0 0 0 3px rgba(244,114,182,.18)!important}
+th{background:#fce7f3!important;color:#831843!important}
+tbody tr:nth-child(odd) td,table tbody tr:nth-child(odd) td{background-color:#fff7fb}
+tbody tr:nth-child(even) td,table tbody tr:nth-child(even) td{background-color:#f5f0ff}
+tbody tr:hover td,table tbody tr:hover td{background-color:#fce7f3!important}
+.module-backbar .btn{background:#ede9fe!important;color:#6d28d9!important;border-color:#ddd6fe!important}
+@media(prefers-reduced-motion:reduce){button,.btn,.module-menu-card{transition:none!important}}
 </style>
 
 </body>
