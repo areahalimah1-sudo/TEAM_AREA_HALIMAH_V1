@@ -459,7 +459,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
             <option value="ALL">SEMUA STORE</option>
             <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
             <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-            <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+            <option value="SSS SENAYAN CITY">SKS SENAYAN CITY</option>
           </select>
         </div>
       </div>
@@ -491,7 +491,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
         <div class="card-head">
           <div>
             <h3>🏪 Ringkasan Semua Store</h3>
-            <div class="small">Seluruh akun Store dapat melihat data SKS GANDARIA CITY, SKS KEMANG SQUARE, dan SSS SENAYAN CITY.</div>
+            <div class="small">Seluruh akun Store dapat melihat data SKS GANDARIA CITY, SKS KEMANG SQUARE, dan SKS SENAYAN CITY.</div>
           </div>
           <button class="btn btn-light" onclick="loadDashboard()">↻ Refresh</button>
         </div>
@@ -561,7 +561,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
             </select>
           </div>
 
@@ -778,7 +778,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
             </select>
           </div>
           <div class="field">
@@ -860,7 +860,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
             </select>
           </div>
           <div class="field">
@@ -916,7 +916,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">ALL STORE</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
             </select>
           </div>
         </div>
@@ -946,7 +946,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="form-grid">
-          <div class="field"><label>FILTER STORE</label><select id="soStore"><option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option></select></div>
+          <div class="field"><label>FILTER STORE</label><select id="soStore"><option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SKS SENAYAN CITY">SSS SENAYAN CITY</option></select></div>
           <div class="field"><label>DARI TANGGAL</label><input id="soFrom" type="date"></div>
           <div class="field"><label>SAMPAI TANGGAL</label><input id="soTo" type="date"></div>
           <div class="field" style="display:flex;align-items:end"><button class="btn btn-primary" onclick="loadSoldOutSummary()">🔎 Tampilkan Rekap</button></div>
@@ -1015,7 +1015,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
               <option value="">Pilih Store</option>
               <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
               <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-              <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+              <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
             </select>
           </div>
           <div class="field">
@@ -1074,7 +1074,7 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
             <option value="ALL">SEMUA STORE</option>
             <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
             <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-            <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>
+            <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>
           </select>
           <input id="swSearch" placeholder="Cari ID / Store / Smallware / Jenis" oninput="renderSmallwareHistory()">
           <select id="swStatusFilter" onchange="renderSmallwareHistory()">
@@ -1180,11 +1180,11 @@ function canonicalStore(value){
   const key = raw.replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 
   if(
-    key === 'SSS SENAYAN CITY' ||
+    key === 'SKS SENAYAN CITY' ||
     key === 'SENAYAN CITY' ||
-    key === 'SSS SNC' ||
+    key === 'SKS SNC' ||
     key.includes('SENAYAN CITY')
-  ) return 'SSS SENAYAN CITY';
+  ) return 'SKS SENAYAN CITY';
 
   if(
     key === 'SKS GANDARIA CITY' ||
@@ -1654,7 +1654,7 @@ function initWastePage(){
     <option value="ALL">ALL STORE</option>
     <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
     <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-    <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>`;
+    <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>`;
 
   select.value = select.value || 'ALL';
   loadWasteDashboard();
@@ -2052,9 +2052,9 @@ function resetWaste(){
 async function saveMaintenance(){
   // Maintenance harus memakai store yang dipilih pada form, bukan store akun (bisa ALL).
   const targetStore=selectedStore('mtStore');
-  const validMaintenanceStores=['SKS GANDARIA CITY','SKS KEMANG SQUARE','SSS SENAYAN CITY'];
+  const validMaintenanceStores=['SKS GANDARIA CITY','SKS KEMANG SQUARE','SKS SENAYAN CITY'];
   if(!targetStore || !validMaintenanceStores.includes(targetStore)){
-    toast('Pilih Store Maintenance yang valid: SKS GANDARIA CITY, SKS KEMANG SQUARE, atau SSS SENAYAN CITY.');
+    toast('Pilih Store Maintenance yang valid: SKS GANDARIA CITY, SKS KEMANG SQUARE, atau SKS SENAYAN CITY.');
     return;
   }
 
@@ -2073,7 +2073,7 @@ async function saveMaintenance(){
       noSC,
       tanggalInput:$('mtInputDate').value,
       tanggalKejadian:$('mtIncidentDate').value,
-      store:targetStore, // Backend menerima store terpilih: SKS GANDARIA CITY / SKS KEMANG SQUARE / SSS SENAYAN CITY.
+      store:targetStore, // Backend menerima store terpilih: SKS GANDARIA CITY / SKS KEMANG SQUARE / SKS SENAYAN CITY.
       kategori:$('mtCategory').value,
       itemAsset:$('mtAsset').value.trim(),
       jenisKerusakan:$('mtDamage').value.trim(),
@@ -2263,7 +2263,7 @@ function initWalkthrough(){
       <option value="">ALL STORE</option>
       <option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option>
       <option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option>
-      <option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>`;
+      <option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>`;
     filter.disabled = false;
   }
 
@@ -2610,9 +2610,9 @@ function prepareSmallwareStoreField(){
   select.innerHTML = `
     <option>SKS GANDARIA CITY</option>
     <option>SKS KEMANG SQUARE</option>
-    <option>SSS SENAYAN CITY</option>
+    <option>SKS SENAYAN CITY</option>
   `;
-  select.value = ['SKS GANDARIA CITY','SKS KEMANG SQUARE','SSS SENAYAN CITY'].includes(current) ? current : 'SKS GANDARIA CITY';
+  select.value = ['SKS GANDARIA CITY','SKS KEMANG SQUARE','SKS SENAYAN CITY'].includes(current) ? current : 'SKS GANDARIA CITY';
   el.replaceWith(select);
 }
 
@@ -3265,7 +3265,7 @@ function __addHistoryFilter(module,card){
   const labels={sales:'History Sales',waste:'History Waste',maintenance:'History Maintenance',kpi:'History KPI'};
   const box=document.createElement('div');box.className='module-history-filter';
   const label=document.createElement('label');label.textContent='FILTER STORE';label.htmlFor=module+'HistoryStoreFilter';
-  const select=document.createElement('select');select.id=module+'HistoryStoreFilter';select.innerHTML='<option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SSS SENAYAN CITY">SSS SENAYAN CITY</option>';
+  const select=document.createElement('select');select.id=module+'HistoryStoreFilter';select.innerHTML='<option value="ALL">SEMUA STORE</option><option value="SKS GANDARIA CITY">SKS GANDARIA CITY</option><option value="SKS KEMANG SQUARE">SKS KEMANG SQUARE</option><option value="SKS SENAYAN CITY">SKS SENAYAN CITY</option>';
   select.addEventListener('change',()=>__filterHistoryRows(module));box.append(label,select);const tableWrap=card.querySelector('.table-wrap');if(tableWrap)card.insertBefore(box,tableWrap);else card.appendChild(box);
 }
 function __filterHistoryRows(module){
