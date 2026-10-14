@@ -1740,8 +1740,8 @@ function renderWasteLatest(rows){
    HISTORY STORE - SEMUA MENU
 ========================================================= */
 function historyHeaderKey(header){
-  // Normalisasi nama header API/Sheets termasuk nama properti camelCase.
   const raw=String(header==null?'':header).trim();
+  // Remove separators and normalize both labels ("DINE IN SALES") and camelCase ("dineIn").
   const key=raw.toUpperCase().replace(/[^A-Z0-9]/g,'');
   const aliases={
     ID:'id', TIMESTAMP:'timestamp', CREATEDAT:'timestamp', UPDATEDAT:'updatedAt',
@@ -1750,56 +1750,100 @@ function historyHeaderKey(header){
     DINEIN:'dineIn', DINEINSALES:'dineIn', SALESDINEIN:'dineIn',
     TCDINEIN:'tcDineIn', DINEINTC:'tcDineIn',
     DELIVERY:'delivery', DELIVERYSALES:'delivery', SALESDELIVERY:'delivery',
-    DELIVERYTC:'tcDelivery', TCDELIVERY:'tcDelivery',
+    TCDELIVERY:'tcDelivery', DELIVERYTC:'tcDelivery',
     TAKEAWAY:'takeAway', TAKEAWAYSALES:'takeAway', SALESTAKEAWAY:'takeAway',
     TCTAKEAWAY:'tcTakeAway', TAKEAWAYTC:'tcTakeAway',
     CONNECTBO:'connectBO', CONNECTBOSALES:'connectBO', SALESCONNECTBO:'connectBO',
-    TCCONNECT:'tcConnect', TCCONNECTBO:'tcConnect', CONNECTBOTC:'tcConnect',
+    TCCONNECT:'tcConnectBO', TCCONNECTBO:'tcConnectBO', CONNECTBOTC:'tcConnectBO',
     TIPS:'tips', TOTALSALES:'totalSales', TOTALTC:'totalTc', KETERANGAN:'keterangan', NOTES:'keterangan', INPUTBY:'inputBy'
   };
-  // Keys must not contain spaces after normalization; explicitly normalize common labels.
-  const cleanAliases={
-    ID:'id', TIMESTAMP:'timestamp', CREATEDAT:'timestamp', UPDATEDAT:'updatedAt',
-    DATE:'tanggal', TANGGAL:'tanggal', TANGGALSALES:'tanggal', TANGGALINPUT:'tanggal', TGL:'tanggal', TGLINPUT:'tanggal',
-    STORE:'store', STORENAME:'store', NAMASTORE:'store', NAMATOKO:'store',
-    DINEIN:'dineIn', DINEINSALES:'dineIn', SALESDINEIN:'dineIn', TCDINEIN:'tcDineIn', DINEINTC:'tcDineIn',
-    DELIVERY:'delivery', DELIVERYSALES:'delivery', SALESDELIVERY:'delivery',
-    TCDELIVERY:'tcDelivery', DELIVERYTC:'tcDelivery',
-    TAKEAWAY:'takeAway', TAKEAWAYSALES:'takeAway', SALESTAKEAWAY:'takeAway', TCTAKEAWAY:'tcTakeAway', TAKEAWAYTC:'tcTakeAway',
-    CONNECTBO:'connectBO', CONNECTBOSALES:'connectBO', SALESCONNECTBO:'connectBO', TCCONNECT:'tcConnect', TCCONNECTBO:'tcConnect', CONNECTBOTC:'tcConnect',
-    TIPS:'tips', TOTALSALES:'totalSales', TOTALTC:'totalTc', KETERANGAN:'keterangan', NOTES:'keterangan', INPUTBY:'inputBy'
-  };
-  if(cleanAliases[key]) return cleanAliases[key];
-  return raw.toLowerCase().replace(/[^a-z0-9]+(.)/g,(m,c)=>c.toUpperCase());
+  return aliases[key] || raw.toLowerCase().replace(/[^a-z0-9]+(.)/g,(m,c)=>c.toUpperCase());
+}
+
+function salesNumericValue_(value){
+  if(typeof value==='number') return Number.isFinite(value)?value:0;
+  if(value===null || value===undefined || value==='') return 0;
+  // Supports raw numbers and formatted strings such as "Rp 1.250.000".
+  const cleaned=String(value).trim().replace(/[^0-9,.-]/g,'');
+  if(!cleaned) return 0;
+  if(cleaned.includes('.') && cleaned.includes(',')) {
+    return Number(cleaned.replace(/\./g,'').replace(',','.')) || 0;
+  }
+  if((cleaned.match(/\./g)||[]).length>1) return Number(cleaned.replace(/\./g,'')) || 0;
+  if(/^-?\d{1,3}(\.\d{3})+$/.test(cleaned)) return Number(cleaned.replace(/\./g,'')) || 0;
+  if(cleaned.includes(',') && !cleaned.includes('.')) {
+    if(/^-?\d{1,3}(,\d{3})+$/.test(cleaned)) return Number(cleaned.replace(/,/g,'')) || 0;
+    return Number(cleaned.replace(',','.')) || 0;
+  }
+  return Number(cleaned) || 0;
+}
+
+function salesDateSortValue_(value){
+  if(value instanceof Date) return value.getTime();
+  const s=String(value||'').trim();
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return new Date(Number(m[1]),Number(m[2])-1,Number(m[3])).getTime()||0;
+  m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1])).getTime()||0;
+  const d=new Date(s); return Number.isNaN(d.getTime())?0:d.getTime();
 }
 
 async function loadDirectDatabaseHistory(moduleName){
   const r=await apiGet('data',{module:moduleName});
   const headers=Array.isArray(r.headers)?r.headers:[];
   const rawRows=Array.isArray(r.data)?r.data:(Array.isArray(r.rows)?r.rows:[]);
-  if(!headers.length && rawRows.length && !Array.isArray(rawRows[0])){
-    return rawRows.slice().reverse().slice(0,5000);
+  let rows;
+  if(!headers.length && rawRows.length && !Array.isArray(rawRows[0])) {
+    rows=rawRows.map(row=>({...row}));
+  } else {
+    rows=rawRows.map(row=>{
+      const obj={};
+      headers.forEach((h,i)=>{
+        const key=historyHeaderKey(h);
+        obj[key]=Array.isArray(row)?row[i]:row[h];
+      });
+      if(!obj.store) obj.store=obj.storeName||obj.namaStore||obj.namaToko||'';
+      if(!obj.tanggal) obj.tanggal=obj.tanggalSales||obj.tanggalInput||obj.tgl||obj.date||'';
+      // Older/newer API versions may use either tcConnect or tcConnectBO.
+      if(obj.tcConnectBO===undefined || obj.tcConnectBO==='') obj.tcConnectBO=obj.tcConnect||obj.tcConnects||0;
+      if(obj.takeAway===undefined || obj.takeAway==='') obj.takeAway=obj.takeaway||0;
+      ['dineIn','tcDineIn','delivery','tcDelivery','takeAway','tcTakeAway','connectBO','tcConnectBO','tips','totalSales','totalTc'].forEach(k=>{
+        if(obj[k]!==undefined) obj[k]=salesNumericValue_(obj[k]);
+      });
+      // Totals are calculated only when the API does not provide a usable total.
+      if(obj.totalSales===undefined || obj.totalSales===null || obj.totalSales==='') {
+        obj.totalSales=salesNumericValue_(obj.dineIn)+salesNumericValue_(obj.delivery)+salesNumericValue_(obj.takeAway)+salesNumericValue_(obj.connectBO);
+      }
+      if(obj.totalTc===undefined || obj.totalTc===null || obj.totalTc==='') {
+        obj.totalTc=salesNumericValue_(obj.tcDineIn)+salesNumericValue_(obj.tcDelivery)+salesNumericValue_(obj.tcTakeAway)+salesNumericValue_(obj.tcConnectBO);
+      }
+      return obj;
+    });
   }
-  return rawRows.map(row=>{
-    const obj={};
-    headers.forEach((h,i)=>obj[historyHeaderKey(h)]=Array.isArray(row)?row[i]:row[h]);
-    // Some databases use slightly different column labels; normalize store/date fields.
-    if(!obj.store) obj.store=obj.storeName||obj.namaStore||obj.namaToko||'';
-    if(!obj.tanggal) obj.tanggal=obj.tanggalSales||obj.tanggalInput||obj.tgl||obj.date||'';
-    // Alias compatibility for the existing API payload and older sheet headers.
-    if(obj.tcConnectBO===undefined) obj.tcConnectBO=obj.tcConnect===undefined?(obj.tcConnects||0):obj.tcConnect;
-    if(obj.takeAway===undefined) obj.takeAway=obj.takeaway===undefined?0:obj.takeaway;
-    if(obj.totalSales===undefined || obj.totalSales==='' || obj.totalSales===null) {
-      obj.totalSales=Number(obj.dineIn||0)+Number(obj.delivery||0)+Number(obj.takeAway||obj.takeaway||0)+Number(obj.connectBO||obj.connects||0);
-    }
-    if(obj.totalTc===undefined || obj.totalTc==='' || obj.totalTc===null) {
-      obj.totalTc=Number(obj.tcDineIn||0)+Number(obj.tcDelivery||0)+Number(obj.tcTakeAway||0)+Number(obj.tcConnectBO||0);
-    }
-    return obj;
-  }).reverse().slice(0,5000);
+  // Preserve newest-first order like the source database and the website screenshot expectation.
+  if(String(moduleName).toLowerCase()==='sales') rows.sort((a,b)=>salesDateSortValue_(b.tanggal||b.date)-salesDateSortValue_(a.tanggal||a.date));
+  else rows.reverse();
+  return rows.slice(0,5000);
 }
 
-async function loadSalesHistory(){if(!state.user)return;try{$('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Memuat history Sales...</td></tr>';const rows=await loadDirectDatabaseHistory('sales');$('salesHistoryBody').innerHTML=rows.length?rows.map(x=>`<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(formatDateWIB(x.tanggal))}</td><td>${formatRupiah(x.dineIn)}</td><td>${Number(x.tcDineIn||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.delivery)}</td><td>${Number(x.tcDelivery||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.takeAway)}</td><td>${Number(x.tcTakeAway||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.connectBO)}</td><td>${Number(x.tcConnectBO||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.tips)}</td><td><b>${formatRupiah(x.totalSales)}</b></td><td><b>${Number(x.totalTc||0).toLocaleString('id-ID')}</b></td><td>${escapeHtml(x.keterangan||'-')}</td><td>${escapeHtml(x.inputBy||'-')}</td></tr>`).join(''):'<tr><td colspan="15" class="empty">Belum ada history Sales.</td></tr>';__filterHistoryRows('sales');}catch(err){$('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Gagal memuat history Sales.</td></tr>';toast('History Sales: '+err.message)}}
+async function loadSalesHistory(){
+  if(!state.user)return;
+  try{
+    $('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Memuat history Sales...</td></tr>';
+    const rows=await loadDirectDatabaseHistory('sales');
+    $('salesHistoryBody').innerHTML=rows.length?rows.map(x=>{
+      const dineIn=salesNumericValue_(x.dineIn), delivery=salesNumericValue_(x.delivery), takeAway=salesNumericValue_(x.takeAway), connectBO=salesNumericValue_(x.connectBO);
+      const tcDineIn=salesNumericValue_(x.tcDineIn), tcDelivery=salesNumericValue_(x.tcDelivery), tcTakeAway=salesNumericValue_(x.tcTakeAway), tcConnectBO=salesNumericValue_(x.tcConnectBO===undefined?x.tcConnect:x.tcConnectBO);
+      const totalSales=(x.totalSales===undefined||x.totalSales===null||x.totalSales==='')?dineIn+delivery+takeAway+connectBO:salesNumericValue_(x.totalSales);
+      const totalTc=(x.totalTc===undefined||x.totalTc===null||x.totalTc==='')?tcDineIn+tcDelivery+tcTakeAway+tcConnectBO:salesNumericValue_(x.totalTc);
+      return `<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(formatDateWIB(x.tanggal||x.date||''))}</td><td>${formatRupiah(dineIn)}</td><td>${tcDineIn.toLocaleString('id-ID')}</td><td>${formatRupiah(delivery)}</td><td>${tcDelivery.toLocaleString('id-ID')}</td><td>${formatRupiah(takeAway)}</td><td>${tcTakeAway.toLocaleString('id-ID')}</td><td>${formatRupiah(connectBO)}</td><td>${tcConnectBO.toLocaleString('id-ID')}</td><td>${formatRupiah(salesNumericValue_(x.tips))}</td><td><b>${formatRupiah(totalSales)}</b></td><td><b>${totalTc.toLocaleString('id-ID')}</b></td><td>${escapeHtml(x.keterangan||'-')}</td><td>${escapeHtml(x.inputBy||'-')}</td></tr>`;
+    }).join(''):'<tr><td colspan="15" class="empty">Belum ada history Sales.</td></tr>';
+    __filterHistoryRows('sales');
+  }catch(err){
+    $('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Gagal memuat history Sales.</td></tr>';
+    toast('History Sales: '+err.message);
+  }
+}
 async function loadWasteHistory(){if(!state.user)return;try{$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Memuat history Waste...</td></tr>';const r=await apiGet('wasteData',{store:'ALL',role:'PUBLIC',userStore:'',limit:5000});const rows=Array.isArray(r.allRows)?r.allRows:(Array.isArray(r.data)?r.data:[]);$('wasteHistoryBody').innerHTML=rows.length?rows.slice().sort((a,b)=>String(b.periodeAkhir||'').localeCompare(String(a.periodeAkhir||''))).map(x=>`<tr><td>${escapeHtml(x.periodeMulai||'-')} s/d ${escapeHtml(x.periodeAkhir||'-')}</td><td>${escapeHtml(x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${escapeHtml(x.satuan||'-')}</td><td><b>${Number(x.totalWaste||0).toLocaleString('id-ID',{maximumFractionDigits:2})}</b></td><td>${escapeHtml(x.storeName||'-')}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Belum ada history Waste.</td></tr>';__filterHistoryRows('waste');}catch(err){$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Gagal memuat history Waste.</td></tr>';toast('History Waste: '+err.message)}}
 function exportMaintenanceWhatsApp(rowIndex){
   const rows=window.__maintenanceHistoryRows||[];
