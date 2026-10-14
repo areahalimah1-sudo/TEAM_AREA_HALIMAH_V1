@@ -1259,6 +1259,40 @@ async function apiGet(action, params={}){
   return result;
 }
 
+
+/* =========================================================
+   CONNECTOR API TERPISAH
+   Backend utama WT_AM_API_URL tetap dipakai modul lama.
+   ========================================================= */
+const SOLDOUT_API_URL = 'https://script.google.com/macros/s/AKfycby23cj523IqsGHw0v_4hK6wCeoYrt9XlW8Ez7VwIMGvHmwk_1Q9kQyefMQWWLEji2fmNA/exec';
+const WASTE_API_URL = 'https://script.google.com/macros/s/AKfycbxnPJlgfnGe042hjTLY9Kzz-YsslYPz2E19A-ySWHm_PfOdFNzY6oRDTfsP9QCC1YGykw/exec';
+
+function buildExternalApiUrl(baseUrl, action, params={}){
+  const url = new URL(baseUrl);
+  url.searchParams.set('action', action);
+  Object.keys(params || {}).forEach(function(key){
+    const value = params[key];
+    if(value !== undefined && value !== null && value !== ''){
+      url.searchParams.set(key, String(value));
+    }
+  });
+  return url.toString();
+}
+
+async function apiGetFrom(baseUrl, action, params={}){
+  const response = await fetch(buildExternalApiUrl(baseUrl, action, params), {
+    method:'GET', mode:'cors', cache:'no-store'
+  });
+  const text = await response.text();
+  let result;
+  try{ result = JSON.parse(text); }
+  catch(error){ throw new Error('Response API eksternal tidak valid. Pastikan Web App mengembalikan JSON.'); }
+  if(!response.ok || (result && result.success === false)){
+    throw new Error((result && result.message) || 'Request API eksternal gagal.');
+  }
+  return result;
+}
+
 async function apiPost(payload){
   const response = await fetch(WT_AM_API_URL, {
     method:'POST',
@@ -1630,7 +1664,7 @@ async function loadExternalWasteDashboard(updateMainDashboard=false){
   if(!state.user) return;
   try{
     const store = ($('wtWasteStore')?.value) || 'ALL';
-    const result = await apiGet('wasteDashboard',{
+    const result = await apiGetFrom(WASTE_API_URL,'wasteDashboard',{
       store,
       role:'PUBLIC',
       userStore:''
@@ -1844,7 +1878,7 @@ async function loadSalesHistory(){
     toast('History Sales: '+err.message);
   }
 }
-async function loadWasteHistory(){if(!state.user)return;try{$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Memuat history Waste...</td></tr>';const r=await apiGet('wasteData',{store:'ALL',role:'PUBLIC',userStore:'',limit:5000});const rows=Array.isArray(r.allRows)?r.allRows:(Array.isArray(r.data)?r.data:[]);$('wasteHistoryBody').innerHTML=rows.length?rows.slice().sort((a,b)=>String(b.periodeAkhir||'').localeCompare(String(a.periodeAkhir||''))).map(x=>`<tr><td>${escapeHtml(x.periodeMulai||'-')} s/d ${escapeHtml(x.periodeAkhir||'-')}</td><td>${escapeHtml(x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${escapeHtml(x.satuan||'-')}</td><td><b>${Number(x.totalWaste||0).toLocaleString('id-ID',{maximumFractionDigits:2})}</b></td><td>${escapeHtml(x.storeName||'-')}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Belum ada history Waste.</td></tr>';__filterHistoryRows('waste');}catch(err){$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Gagal memuat history Waste.</td></tr>';toast('History Waste: '+err.message)}}
+async function loadWasteHistory(){if(!state.user)return;try{$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Memuat history Waste...</td></tr>';const r=await apiGetFrom(WASTE_API_URL,'wasteData',{store:'ALL',role:'PUBLIC',userStore:'',limit:5000});const rows=Array.isArray(r.allRows)?r.allRows:(Array.isArray(r.data)?r.data:[]);$('wasteHistoryBody').innerHTML=rows.length?rows.slice().sort((a,b)=>String(b.periodeAkhir||'').localeCompare(String(a.periodeAkhir||''))).map(x=>`<tr><td>${escapeHtml(x.periodeMulai||'-')} s/d ${escapeHtml(x.periodeAkhir||'-')}</td><td>${escapeHtml(x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${escapeHtml(x.satuan||'-')}</td><td><b>${Number(x.totalWaste||0).toLocaleString('id-ID',{maximumFractionDigits:2})}</b></td><td>${escapeHtml(x.storeName||'-')}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Belum ada history Waste.</td></tr>';__filterHistoryRows('waste');}catch(err){$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Gagal memuat history Waste.</td></tr>';toast('History Waste: '+err.message)}}
 function exportMaintenanceWhatsApp(rowIndex){
   const rows=window.__maintenanceHistoryRows||[];
   const x=rows[rowIndex];
@@ -1877,7 +1911,7 @@ async function loadSoldOutSummary(){
   if(!body)return;
   body.innerHTML='<tr><td colspan="8" class="empty">Memuat rekap Sold Out...</td></tr>';
   try{
-    const r=await apiGet('soldoutSummary',{
+    const r=await apiGetFrom(SOLDOUT_API_URL,'soldoutSummary',{
       store:document.getElementById('soStore')?.value||'ALL',
       from:document.getElementById('soFrom')?.value||'',
       to:document.getElementById('soTo')?.value||'',
