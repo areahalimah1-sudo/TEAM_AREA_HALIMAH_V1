@@ -675,6 +675,11 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
           <div class="label">PERIODE TERBARU</div>
           <div id="wtWastePeriod" class="value" style="font-size:14px">-</div>
         </div>
+        <div class="stat">
+          <div class="icon">📈</div>
+          <div class="label">PERGERAKAN VS PERIODE SEBELUMNYA</div>
+          <div id="wtWasteMovement" class="value" style="font-size:16px">-</div>
+        </div>
       </div>
 
       <div class="card" style="margin-top:16px">
@@ -689,6 +694,14 @@ button.btn:not(:disabled):hover{filter:saturate(1.12);box-shadow:0 7px 15px rgba
           <div class="field">
             <label>STORE</label>
             <select id="wtWasteStore" onchange="loadWasteDashboard()"></select>
+          </div>
+          <div class="field">
+            <label>PERIODE MULAI</label>
+            <input id="wtWasteFrom" type="date" onchange="loadWasteDashboard()">
+          </div>
+          <div class="field">
+            <label>PERIODE AKHIR</label>
+            <input id="wtWasteTo" type="date" onchange="loadWasteDashboard()">
           </div>
         </div>
       </div>
@@ -1223,16 +1236,49 @@ function isAM(){
 
 const WT_AM_API_URL = 'https://script.google.com/macros/s/AKfycbwA2fvkfBXDeDZpIPq5Gbwyp-VKImCYzibIhcoLkYu6lf3a7LlYsgU_ksAu3rjfFt7h/exec';
 
-function buildApiUrl(action, params={}){
-  const url = new URL(WT_AM_API_URL);
-  url.searchParams.set('action', action);
-  Object.keys(params || {}).forEach(function(key){
-    const value = params[key];
-    if(value !== undefined && value !== null && value !== ''){
-      url.searchParams.set(key, String(value));
-    }
-  });
-  return url.toString();
+// KONEKSI KHUSUS SOLD OUT — TIDAK MENGGUNAKAN BACKEND CONTROL AREA HALIMAH.
+// Setelah deploy Apps Script konektor Sold Out mandiri, isi URL Web App di bawah.
+const SOLDOUT_API_URL = 'https://docs.google.com/spreadsheets/d/1b5OZmSRUo8HDzjpNPRlxCiBLVAzDvFP8CwP3mELWVog/gviz/tq?tqx=out:json&sheet=RECAP%20SOLD%20OUT%20DETAIL';
+
+function parseGvizSoldOut_(raw){
+  const start=raw.indexOf('{'), end=raw.lastIndexOf('}');
+  if(start<0||end<=start) throw new Error('Google Sheets tidak mengembalikan data JSON. Pastikan tab dipublikasikan atau akses link aktif.');
+  const payload=JSON.parse(raw.slice(start,end+1));
+  if(payload.status&&payload.status!=='ok') throw new Error('Google Sheets menolak akses ke tab Sold Out.');
+  const cols=(payload.table?.cols||[]).map(c=>String(c.label||c.id||'').trim());
+  return (payload.table?.rows||[]).map(row=>{const o={};(row.c||[]).forEach((c,i)=>o[cols[i]||('COL_'+i)]=c?(c.f!=null?c.f:c.v):'');return o;});
+}
+function soldOutNorm_(s){return String(s==null?'':s).trim().toUpperCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');}
+function soldOutDateKey_(v){
+  if(v==null||v==='')return ''; const s=String(v).trim(); let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(m)return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+  const d=new Date(s);return isNaN(d.getTime())?'':d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+function soldOutLongestStreak_(dates){if(!dates.length)return 0;let best=1,run=1;for(let i=1;i<dates.length;i++){const a=new Date(dates[i-1]+'T00:00:00Z'),b=new Date(dates[i]+'T00:00:00Z');if(b-a===86400000)run++;else run=1;if(run>best)best=run;}return best;}
+async function soldOutApiGet(params={}){
+  const url=new URL(SOLDOUT_API_URL);url.searchParams.set('tqx','out:json');url.searchParams.set('sheet','RECAP SOLD OUT DETAIL');url.searchParams.set('_ts',String(Date.now()));
+  const response=await fetch(url.toString(),{method:'GET',cache:'no-store'});
+  if(!response.ok)throw new Error('Gagal membaca Google Sheets Sold Out ('+response.status+').');
+  const rows=parseGvizSoldOut_(await response.text());
+  const pick=(row,aliases)=>{for(const a of aliases){const k=Object.keys(row).find(x=>soldOutNorm_(x)===soldOutNorm_(a));if(k!==undefined)return row[k];}return '';};
+  const storeFilter=soldOutNorm_(params.store||'ALL'), from=String(params.from||''), to=String(params.to||'');
+  const rawData=rows.map(row=>({
+    store:String(pick(row,['NAMA STORE','STORE','STORE NAME'])||'').trim(),
+    tanggal:soldOutDateKey_(pick(row,['TANGGAL','DATE','TGL'])),
+    kodeMaterial:String(pick(row,['KODE MATERIAL','KODE BARANG','MATERIAL CODE'])||'').trim(),
+    namaBarang:String(pick(row,['NAMA MATERIAL','NAMA BARANG','NAMA ITEM','MATERIAL NAME'])||'').trim(),
+    kodeMenu:String(pick(row,['KODE MENU'])||''),namaMenu:String(pick(row,['NAMA MENU'])||''),
+    lastTrade:String(pick(row,['LAST TRADE'])||''),soldout:String(pick(row,['SOLDOUT','SOLD OUT'])||''),
+    expired:String(pick(row,['EXPIRED HT'])||''),koreksi:String(pick(row,['KOREKSI'])||''),isp:String(pick(row,['ISP'])||''),
+    keterangan:String(pick(row,['KETERANGAN / ACTION','PENYEBAB SOLD OUT','PENYEBAB'])||'')
+  })).filter(x=>x.store&&x.tanggal&&(x.kodeMaterial||x.namaBarang))
+    .filter(x=>storeFilter==='ALL'||soldOutNorm_(x.store)===storeFilter)
+    .filter(x=>(!from||x.tanggal>=from)&&(!to||x.tanggal<=to));
+  const grouped=new Map();rawData.forEach(x=>{const k=soldOutNorm_(x.store)+'||'+(x.kodeMaterial||x.namaBarang);if(!grouped.has(k))grouped.set(k,{store:x.store,kodeMaterial:x.kodeMaterial,namaBarang:x.namaBarang,dates:new Set(),soTerakhir:x.tanggal});const g=grouped.get(k);g.dates.add(x.tanggal);if(x.tanggal>g.soTerakhir)g.soTerakhir=x.tanggal;});
+  const data=Array.from(grouped.values()).map(g=>{const dates=Array.from(g.dates).sort(),longestStreak=soldOutLongestStreak_(dates),totalHariSO=dates.length;const priority=(longestStreak>=5||totalHariSO>=10)?'CRITICAL':(longestStreak>=3||totalHariSO>=6)?'HIGH':totalHariSO>=3?'MONITOR':'NORMAL';return {store:g.store,kodeMaterial:g.kodeMaterial,namaBarang:g.namaBarang,totalHariSO,soTerakhir:g.soTerakhir,longestStreak,priority};}).sort((a,b)=>(({CRITICAL:0,HIGH:1,MONITOR:2,NORMAL:3}[a.priority])-({CRITICAL:0,HIGH:1,MONITOR:2,NORMAL:3}[b.priority]))||b.totalHariSO-a.totalHariSO||a.namaBarang.localeCompare(b.namaBarang)).slice(0,Number(params.limit)||5000);
+  return {success:true,data,summary:{totalItems:new Set(data.map(x=>x.kodeMaterial||x.namaBarang)).size,totalStoreItems:data.length,totalSoldOutDays:data.reduce((s,x)=>s+x.totalHariSO,0),critical:data.filter(x=>x.priority==='CRITICAL').length},source:'RECAP SOLD OUT DETAIL'};
 }
 
 async function apiGet(action, params={}){
@@ -1256,40 +1302,6 @@ async function apiGet(action, params={}){
     throw new Error((result && result.message) || 'Request gagal.');
   }
 
-  return result;
-}
-
-
-/* =========================================================
-   CONNECTOR API TERPISAH
-   Backend utama WT_AM_API_URL tetap dipakai modul lama.
-   ========================================================= */
-const SOLDOUT_API_URL = 'https://script.google.com/macros/s/AKfycby23cj523IqsGHw0v_4hK6wCeoYrt9XlW8Ez7VwIMGvHmwk_1Q9kQyefMQWWLEji2fmNA/exec';
-const WASTE_API_URL = 'https://script.google.com/macros/s/AKfycbxnPJlgfnGe042hjTLY9Kzz-YsslYPz2E19A-ySWHm_PfOdFNzY6oRDTfsP9QCC1YGykw/exec';
-
-function buildExternalApiUrl(baseUrl, action, params={}){
-  const url = new URL(baseUrl);
-  url.searchParams.set('action', action);
-  Object.keys(params || {}).forEach(function(key){
-    const value = params[key];
-    if(value !== undefined && value !== null && value !== ''){
-      url.searchParams.set(key, String(value));
-    }
-  });
-  return url.toString();
-}
-
-async function apiGetFrom(baseUrl, action, params={}){
-  const response = await fetch(buildExternalApiUrl(baseUrl, action, params), {
-    method:'GET', mode:'cors', cache:'no-store'
-  });
-  const text = await response.text();
-  let result;
-  try{ result = JSON.parse(text); }
-  catch(error){ throw new Error('Response API eksternal tidak valid. Pastikan Web App mengembalikan JSON.'); }
-  if(!response.ok || (result && result.success === false)){
-    throw new Error((result && result.message) || 'Request API eksternal gagal.');
-  }
   return result;
 }
 
@@ -1664,8 +1676,10 @@ async function loadExternalWasteDashboard(updateMainDashboard=false){
   if(!state.user) return;
   try{
     const store = ($('wtWasteStore')?.value) || 'ALL';
-    const result = await apiGetFrom(WASTE_API_URL,'wasteDashboard',{
+    const result = await apiGet('wasteDashboard',{
       store,
+      from:($('wtWasteFrom')?.value)||'',
+      to:($('wtWasteTo')?.value)||'',
       role:'PUBLIC',
       userStore:''
     });
@@ -1708,6 +1722,13 @@ function renderWasteDashboard(result){
   $('wtWasteItems').textContent=Number(summary.uniqueItems||0).toLocaleString('id-ID');
   $('wtWasteTransactions').textContent=Number(summary.totalTransactions||0).toLocaleString('id-ID');
   $('wtWastePeriod').textContent=summary.latestPeriod||'-';
+  const movementEl=$('wtWasteMovement');
+  if(movementEl){
+    const pct=Number(summary.changePercent||0);
+    const movement=String(summary.movement||'NO BASELINE');
+    movementEl.textContent=movement==='NO BASELINE'?'Belum ada pembanding':`${pct>0?'+':''}${pct.toLocaleString('id-ID',{maximumFractionDigits:1})}%`;
+    movementEl.title=summary.previousPeriod?`Sebelumnya ${summary.previousPeriod}: ${Number(summary.previousTotalWaste||0).toLocaleString('id-ID',{maximumFractionDigits:2})}`:'Belum tersedia periode pembanding';
+  }
   $('wtWasteTableInfo').textContent=summary.latestPeriod
     ? `Periode terbaru: ${summary.latestPeriod}`
     : 'Belum ada data Waste.';
@@ -1774,111 +1795,45 @@ function renderWasteLatest(rows){
    HISTORY STORE - SEMUA MENU
 ========================================================= */
 function historyHeaderKey(header){
-  const raw=String(header==null?'':header).trim();
-  // Remove separators and normalize both labels ("DINE IN SALES") and camelCase ("dineIn").
-  const key=raw.toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const aliases={
-    ID:'id', TIMESTAMP:'timestamp', CREATEDAT:'timestamp', UPDATEDAT:'updatedAt',
-    DATE:'tanggal', TANGGAL:'tanggal', TANGGALSALES:'tanggal', TANGGALINPUT:'tanggal', TGL:'tanggal', TGLINPUT:'tanggal',
-    STORE:'store', STORENAME:'store', NAMASTORE:'store', NAMATOKO:'store',
-    DINEIN:'dineIn', DINEINSALES:'dineIn', SALESDINEIN:'dineIn',
-    TCDINEIN:'tcDineIn', DINEINTC:'tcDineIn',
-    DELIVERY:'delivery', DELIVERYSALES:'delivery', SALESDELIVERY:'delivery',
-    TCDELIVERY:'tcDelivery', DELIVERYTC:'tcDelivery',
-    TAKEAWAY:'takeAway', TAKEAWAYSALES:'takeAway', SALESTAKEAWAY:'takeAway',
-    TCTAKEAWAY:'tcTakeAway', TAKEAWAYTC:'tcTakeAway',
-    CONNECTBO:'connectBO', CONNECTBOSALES:'connectBO', SALESCONNECTBO:'connectBO',
-    TCCONNECT:'tcConnectBO', TCCONNECTBO:'tcConnectBO', CONNECTBOTC:'tcConnectBO',
-    TIPS:'tips', TOTALSALES:'totalSales', TOTALTC:'totalTc', KETERANGAN:'keterangan', NOTES:'keterangan', INPUTBY:'inputBy'
+  const h=String(header||'').trim().toUpperCase();
+  const map={
+    'ID':'id','TIMESTAMP':'timestamp','TANGGAL':'tanggal','TANGGAL SALES':'tanggal','STORE':'store','STORE NAME':'store','NAMA STORE':'store',
+    'DINE IN':'dineIn','DINE IN SALES':'dineIn','SALES DINE IN':'dineIn','TC DINE IN':'tcDineIn','DINE IN TC':'tcDineIn',
+    'DELIVERY':'delivery','DELIVERY SALES':'delivery','SALES DELIVERY':'delivery','TC DELIVERY':'tcDelivery','DELIVERY TC':'tcDelivery',
+    'TAKE AWAY':'takeAway','TAKE AWAY SALES':'takeAway','TAKEAWAY SALES':'takeAway','SALES TAKE AWAY':'takeAway','TC TAKE AWAY':'tcTakeAway','TAKE AWAY TC':'tcTakeAway','TAKEAWAY TC':'tcTakeAway',
+    'CONNECT / BO':'connectBO','CONNECT / BO SALES':'connectBO','CONNECT BO SALES':'connectBO','SALES CONNECT / BO':'connectBO','TC CONNECT / BO':'tcConnectBO','CONNECT / BO TC':'tcConnectBO',
+    'TIPS':'tips','TOTAL SALES':'totalSales','TOTAL TC':'totalTc','KETERANGAN':'keterangan','INPUT BY':'inputBy',
+    'NO SC':'noSC','NOMOR SC':'noSC','TANGGAL INPUT':'tanggalInput','TGL INPUT':'tanggalInput','TANGGAL KEJADIAN':'tanggalKejadian','TGL KEJADIAN':'tanggalKejadian',
+    'KATEGORI':'kategori','ITEM / ASSET':'itemAsset','ASSET':'itemAsset','JENIS KERUSAKAN':'jenisKerusakan','KERUSAKAN':'jenisKerusakan',
+    'PRIORITAS':'prioritas','FOTO BEFORE':'fotoBefore','STATUS':'status','TEKNISI / VENDOR':'teknisiVendor',
+    'TANGGAL PROGRESS':'tanggalProgress','FOTO PROGRESS':'fotoProgress','TINDAKAN':'tindakan',
+    'TANGGAL SELESAI':'tanggalSelesai','FOTO AFTER':'fotoAfter','KETERANGAN SELESAI':'keteranganSelesai',
+    'BULAN':'bulan','TAHUN':'tahun','TANGGAL UPLOAD':'tanggalUpload','TGL UPLOAD':'tanggalUpload','FILE NAME':'fileName','NAMA FILE':'fileName',
+    'DRIVE URL':'driveUrl','DRIVE FILE ID':'driveFileId','UPLOAD BY':'uploadBy'
   };
-  return aliases[key] || raw.toLowerCase().replace(/[^a-z0-9]+(.)/g,(m,c)=>c.toUpperCase());
-}
-
-function salesNumericValue_(value){
-  if(typeof value==='number') return Number.isFinite(value)?value:0;
-  if(value===null || value===undefined || value==='') return 0;
-  // Supports raw numbers and formatted strings such as "Rp 1.250.000".
-  const cleaned=String(value).trim().replace(/[^0-9,.-]/g,'');
-  if(!cleaned) return 0;
-  if(cleaned.includes('.') && cleaned.includes(',')) {
-    return Number(cleaned.replace(/\./g,'').replace(',','.')) || 0;
-  }
-  if((cleaned.match(/\./g)||[]).length>1) return Number(cleaned.replace(/\./g,'')) || 0;
-  if(/^-?\d{1,3}(\.\d{3})+$/.test(cleaned)) return Number(cleaned.replace(/\./g,'')) || 0;
-  if(cleaned.includes(',') && !cleaned.includes('.')) {
-    if(/^-?\d{1,3}(,\d{3})+$/.test(cleaned)) return Number(cleaned.replace(/,/g,'')) || 0;
-    return Number(cleaned.replace(',','.')) || 0;
-  }
-  return Number(cleaned) || 0;
-}
-
-function salesDateSortValue_(value){
-  if(value instanceof Date) return value.getTime();
-  const s=String(value||'').trim();
-  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if(m) return new Date(Number(m[1]),Number(m[2])-1,Number(m[3])).getTime()||0;
-  m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-  if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1])).getTime()||0;
-  const d=new Date(s); return Number.isNaN(d.getTime())?0:d.getTime();
+  if(map[h]) return map[h];
+  return h.toLowerCase().replace(/[^a-z0-9]+(.)/g,(m,c)=>c.toUpperCase());
 }
 
 async function loadDirectDatabaseHistory(moduleName){
   const r=await apiGet('data',{module:moduleName});
   const headers=Array.isArray(r.headers)?r.headers:[];
   const rawRows=Array.isArray(r.data)?r.data:(Array.isArray(r.rows)?r.rows:[]);
-  let rows;
-  if(!headers.length && rawRows.length && !Array.isArray(rawRows[0])) {
-    rows=rawRows.map(row=>({...row}));
-  } else {
-    rows=rawRows.map(row=>{
-      const obj={};
-      headers.forEach((h,i)=>{
-        const key=historyHeaderKey(h);
-        obj[key]=Array.isArray(row)?row[i]:row[h];
-      });
-      if(!obj.store) obj.store=obj.storeName||obj.namaStore||obj.namaToko||'';
-      if(!obj.tanggal) obj.tanggal=obj.tanggalSales||obj.tanggalInput||obj.tgl||obj.date||'';
-      // Older/newer API versions may use either tcConnect or tcConnectBO.
-      if(obj.tcConnectBO===undefined || obj.tcConnectBO==='') obj.tcConnectBO=obj.tcConnect||obj.tcConnects||0;
-      if(obj.takeAway===undefined || obj.takeAway==='') obj.takeAway=obj.takeaway||0;
-      ['dineIn','tcDineIn','delivery','tcDelivery','takeAway','tcTakeAway','connectBO','tcConnectBO','tips','totalSales','totalTc'].forEach(k=>{
-        if(obj[k]!==undefined) obj[k]=salesNumericValue_(obj[k]);
-      });
-      // Totals are calculated only when the API does not provide a usable total.
-      if(obj.totalSales===undefined || obj.totalSales===null || obj.totalSales==='') {
-        obj.totalSales=salesNumericValue_(obj.dineIn)+salesNumericValue_(obj.delivery)+salesNumericValue_(obj.takeAway)+salesNumericValue_(obj.connectBO);
-      }
-      if(obj.totalTc===undefined || obj.totalTc===null || obj.totalTc==='') {
-        obj.totalTc=salesNumericValue_(obj.tcDineIn)+salesNumericValue_(obj.tcDelivery)+salesNumericValue_(obj.tcTakeAway)+salesNumericValue_(obj.tcConnectBO);
-      }
-      return obj;
-    });
+  if(!headers.length && rawRows.length && !Array.isArray(rawRows[0])){
+    return rawRows.slice().reverse().slice(0,5000);
   }
-  // Preserve newest-first order like the source database and the website screenshot expectation.
-  if(String(moduleName).toLowerCase()==='sales') rows.sort((a,b)=>salesDateSortValue_(b.tanggal||b.date)-salesDateSortValue_(a.tanggal||a.date));
-  else rows.reverse();
-  return rows.slice(0,5000);
+  return rawRows.map(row=>{
+    const obj={};
+    headers.forEach((h,i)=>obj[historyHeaderKey(h)]=Array.isArray(row)?row[i]:row[h]);
+    // Some databases use slightly different column labels; normalize store/date fields.
+    if(!obj.store) obj.store=obj.storeName||obj.namaStore||obj.namaToko||'';
+    if(!obj.tanggal) obj.tanggal=obj.tanggalSales||obj.tanggalInput||obj.tgl||'';
+    return obj;
+  }).reverse().slice(0,5000);
 }
 
-async function loadSalesHistory(){
-  if(!state.user)return;
-  try{
-    $('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Memuat history Sales...</td></tr>';
-    const rows=await loadDirectDatabaseHistory('sales');
-    $('salesHistoryBody').innerHTML=rows.length?rows.map(x=>{
-      const dineIn=salesNumericValue_(x.dineIn), delivery=salesNumericValue_(x.delivery), takeAway=salesNumericValue_(x.takeAway), connectBO=salesNumericValue_(x.connectBO);
-      const tcDineIn=salesNumericValue_(x.tcDineIn), tcDelivery=salesNumericValue_(x.tcDelivery), tcTakeAway=salesNumericValue_(x.tcTakeAway), tcConnectBO=salesNumericValue_(x.tcConnectBO===undefined?x.tcConnect:x.tcConnectBO);
-      const totalSales=(x.totalSales===undefined||x.totalSales===null||x.totalSales==='')?dineIn+delivery+takeAway+connectBO:salesNumericValue_(x.totalSales);
-      const totalTc=(x.totalTc===undefined||x.totalTc===null||x.totalTc==='')?tcDineIn+tcDelivery+tcTakeAway+tcConnectBO:salesNumericValue_(x.totalTc);
-      return `<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(formatDateWIB(x.tanggal||x.date||''))}</td><td>${formatRupiah(dineIn)}</td><td>${tcDineIn.toLocaleString('id-ID')}</td><td>${formatRupiah(delivery)}</td><td>${tcDelivery.toLocaleString('id-ID')}</td><td>${formatRupiah(takeAway)}</td><td>${tcTakeAway.toLocaleString('id-ID')}</td><td>${formatRupiah(connectBO)}</td><td>${tcConnectBO.toLocaleString('id-ID')}</td><td>${formatRupiah(salesNumericValue_(x.tips))}</td><td><b>${formatRupiah(totalSales)}</b></td><td><b>${totalTc.toLocaleString('id-ID')}</b></td><td>${escapeHtml(x.keterangan||'-')}</td><td>${escapeHtml(x.inputBy||'-')}</td></tr>`;
-    }).join(''):'<tr><td colspan="15" class="empty">Belum ada history Sales.</td></tr>';
-    __filterHistoryRows('sales');
-  }catch(err){
-    $('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Gagal memuat history Sales.</td></tr>';
-    toast('History Sales: '+err.message);
-  }
-}
-async function loadWasteHistory(){if(!state.user)return;try{$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Memuat history Waste...</td></tr>';const r=await apiGetFrom(WASTE_API_URL,'wasteData',{store:'ALL',role:'PUBLIC',userStore:'',limit:5000});const rows=Array.isArray(r.allRows)?r.allRows:(Array.isArray(r.data)?r.data:[]);$('wasteHistoryBody').innerHTML=rows.length?rows.slice().sort((a,b)=>String(b.periodeAkhir||'').localeCompare(String(a.periodeAkhir||''))).map(x=>`<tr><td>${escapeHtml(x.periodeMulai||'-')} s/d ${escapeHtml(x.periodeAkhir||'-')}</td><td>${escapeHtml(x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${escapeHtml(x.satuan||'-')}</td><td><b>${Number(x.totalWaste||0).toLocaleString('id-ID',{maximumFractionDigits:2})}</b></td><td>${escapeHtml(x.storeName||'-')}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Belum ada history Waste.</td></tr>';__filterHistoryRows('waste');}catch(err){$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Gagal memuat history Waste.</td></tr>';toast('History Waste: '+err.message)}}
+async function loadSalesHistory(){if(!state.user)return;try{$('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Memuat history Sales...</td></tr>';const rows=await loadDirectDatabaseHistory('sales');$('salesHistoryBody').innerHTML=rows.length?rows.map(x=>`<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(formatDateWIB(x.tanggal))}</td><td>${formatRupiah(x.dineIn)}</td><td>${Number(x.tcDineIn||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.delivery)}</td><td>${Number(x.tcDelivery||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.takeAway)}</td><td>${Number(x.tcTakeAway||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.connectBO)}</td><td>${Number(x.tcConnectBO||0).toLocaleString('id-ID')}</td><td>${formatRupiah(x.tips)}</td><td><b>${formatRupiah(x.totalSales)}</b></td><td><b>${Number(x.totalTc||0).toLocaleString('id-ID')}</b></td><td>${escapeHtml(x.keterangan||'-')}</td><td>${escapeHtml(x.inputBy||'-')}</td></tr>`).join(''):'<tr><td colspan="15" class="empty">Belum ada history Sales.</td></tr>';__filterHistoryRows('sales');}catch(err){$('salesHistoryBody').innerHTML='<tr><td colspan="15" class="empty">Gagal memuat history Sales.</td></tr>';toast('History Sales: '+err.message)}}
+async function loadWasteHistory(){if(!state.user)return;try{$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Memuat history Waste...</td></tr>';const r=await apiGet('wasteData',{store:($('wtWasteStore')?.value)||'ALL',from:($('wtWasteFrom')?.value)||'',to:($('wtWasteTo')?.value)||'',role:'PUBLIC',userStore:'',limit:5000});const rows=Array.isArray(r.allRows)?r.allRows:(Array.isArray(r.data)?r.data:[]);$('wasteHistoryBody').innerHTML=rows.length?rows.slice().sort((a,b)=>String(b.periodeAkhir||'').localeCompare(String(a.periodeAkhir||''))).map(x=>`<tr><td>${escapeHtml(x.periodeMulai||'-')} s/d ${escapeHtml(x.periodeAkhir||'-')}</td><td>${escapeHtml(x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${escapeHtml(x.satuan||'-')}</td><td><b>${Number(x.totalWaste||0).toLocaleString('id-ID',{maximumFractionDigits:2})}</b></td><td>${escapeHtml(x.storeName||'-')}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Belum ada history Waste.</td></tr>';__filterHistoryRows('waste');}catch(err){$('wasteHistoryBody').innerHTML='<tr><td colspan="6" class="empty">Gagal memuat history Waste.</td></tr>';toast('History Waste: '+err.message)}}
 function exportMaintenanceWhatsApp(rowIndex){
   const rows=window.__maintenanceHistoryRows||[];
   const x=rows[rowIndex];
@@ -1911,7 +1866,8 @@ async function loadSoldOutSummary(){
   if(!body)return;
   body.innerHTML='<tr><td colspan="8" class="empty">Memuat rekap Sold Out...</td></tr>';
   try{
-    const r=await apiGetFrom(SOLDOUT_API_URL,'soldoutSummary',{
+    const r=await soldOutApiGet({
+      action:'soldoutSummary',
       store:document.getElementById('soStore')?.value||'ALL',
       from:document.getElementById('soFrom')?.value||'',
       to:document.getElementById('soTo')?.value||'',
@@ -1928,7 +1884,7 @@ async function loadSoldOutSummary(){
       const priority=String(x.priority||'NORMAL').toUpperCase();
       const colors={CRITICAL:'badge-danger',HIGH:'badge-warning',MONITOR:'badge-progress',NORMAL:'badge-success'};
       const badge=colors[priority]||'badge-progress';
-      return `<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(x.kodeMaterial||x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${Number(x.totalHariSO||0).toLocaleString('id-ID')}</td><td>${escapeHtml(x.soTerakhir||'-')}</td><td>${escapeHtml(x.periodeSO||'-')}</td><td>${Number(x.longestStreak||0).toLocaleString('id-ID')}</td><td><span class="badge ${badge}">${escapeHtml(priority)}</span></td></tr>`;
+      return `<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(x.kodeMaterial||x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${Number(x.totalHariSO||0).toLocaleString('id-ID')}</td><td>${escapeHtml(x.soTerakhir||'-')}</td><td>${escapeHtml(Array.isArray(x.periodeSO)?x.periodeSO.map(p=>p.start===p.end?p.start:(p.start+' s/d '+p.end)).join(', '):(x.periodeSO||'-'))}</td><td>${Number(x.longestStreak||0).toLocaleString('id-ID')}</td><td><span class="badge ${badge}">${escapeHtml(priority)}</span></td></tr>`;
     }).join('');
   }catch(err){
     body.innerHTML=`<tr><td colspan="8" class="empty">Gagal memuat Sold Out: ${escapeHtml(err.message||String(err))}</td></tr>`;
@@ -3135,27 +3091,21 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 
-/* V19: scenic wallpaper changes once per calendar day; same theme remains for the whole day. */
+/* V16 scenic wallpaper: one landscape per 3-hour block, consistent for all visitors in that block. */
 (function initScenicBackground(){
   const scenicPhotos = [
     'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=2200&q=85',
     'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=2200&q=85',
     'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2200&q=85',
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85',
-    'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=2200&q=85',
-    'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=2200&q=85',
-    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2200&q=85'
+    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85'
   ];
   const applyScenic = () => {
-    const now = new Date();
-    const dayKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
-    const dayNumber = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
-    const url = scenicPhotos[((dayNumber % scenicPhotos.length) + scenicPhotos.length) % scenicPhotos.length];
+    const threeHourBlock = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
+    const url = scenicPhotos[threeHourBlock % scenicPhotos.length];
     document.documentElement.style.setProperty('--scenic-image', `url("${url}")`);
-    document.documentElement.setAttribute('data-daily-theme', dayKey);
   };
   applyScenic();
-  window.setInterval(applyScenic, 60 * 60 * 1000);
+  window.setInterval(applyScenic, 60 * 1000);
 })();
 
 
@@ -3447,139 +3397,6 @@ button:hover,.btn:hover{filter:brightness(.98);box-shadow:0 4px 12px rgba(47,70,
 /* Keep text contrast clear on light backgrounds */
 .card h1,.card h2,.card h3,.panel h1,.panel h2,.panel h3,
 .page-section h1,.page-section h2,.page-section h3{color:#293a50}
-</style>
-
-
-<style id="halimah-colorful-theme-v2">
-/* V19 COLORFUL FEMININE THEME — VISUAL ONLY; does not alter module logic or API calls. */
-:root{
- --pink-main:#ec4899;--pink-deep:#9d174d;--lavender-main:#8b5cf6;--peach-main:#fb923c;
- --mint-main:#10b981;--sky-main:#0ea5e9;--butter-main:#eab308;
- --line:#f0dce9;--shadow:0 10px 28px rgba(131,65,112,.12);
-}
-body::before{
- background-image:linear-gradient(135deg,rgba(255,239,248,.58),rgba(245,238,255,.48)),var(--scenic-image)!important;
- background-size:cover;background-position:center;background-repeat:no-repeat;
-}
-body::after{background:rgba(255,246,251,.16)!important}
-.topbar{background:rgba(255,248,252,.88)!important;border-bottom-color:#f3d8e8!important}
-.logo{background:linear-gradient(135deg,#f9a8d4,#c4b5fd,#fdba74)!important;color:#6b214f}
-.userpill{background:#ffe4f1!important;color:#9d174d!important;border-color:#f9c5df!important}
-.card,.stat,.hero,.login-card,.module-menu-card,.panel,.module-content-panel{
- border-color:rgba(255,255,255,.9)!important;box-shadow:0 9px 26px rgba(125,67,111,.10)
-}
-.hero{background:linear-gradient(135deg,rgba(255,228,242,.94),rgba(237,228,255,.94) 55%,rgba(255,239,220,.94))!important}
-.login-wrap{background:linear-gradient(135deg,rgba(255,228,242,.88),rgba(237,228,255,.88),rgba(255,239,220,.88))!important}
-/* Every action button has a visible color; common actions have consistent colors. */
-button,.btn{border-radius:12px!important;font-weight:750;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease}
-button:not(:disabled):hover,.btn:not(:disabled):hover{transform:translateY(-1px);filter:saturate(1.12);box-shadow:0 7px 16px rgba(125,67,111,.18)!important}
-button.btn-primary,.btn-primary{background:#dbeafe!important;color:#1d4ed8!important;border:1px solid #bfdbfe!important}
-button.btn-green,.btn-green{background:#d1fae5!important;color:#065f46!important;border:1px solid #a7f3d0!important}
-button.btn-purple,.btn-purple{background:#ede9fe!important;color:#6d28d9!important;border:1px solid #ddd6fe!important}
-button.btn-orange,.btn-orange{background:#ffedd5!important;color:#9a3412!important;border:1px solid #fed7aa!important}
-button.btn-peach,.btn-peach{background:#ffe4e6!important;color:#9f1239!important;border:1px solid #fecdd3!important}
-button.btn-danger,.btn-danger{background:#fee2e2!important;color:#991b1b!important;border:1px solid #fecaca!important}
-button.btn-light,.btn-light{background:#f3e8ff!important;color:#6b21a8!important;border:1px solid #e9d5ff!important}
-/* Neutral buttons also get color by action position, while preserving named button colors above. */
-button:not([class*="btn-"]):not(.active){background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8}
-#nav button:nth-child(8n+1){background:#fce7f3!important;color:#9d174d!important;border-color:#fbcfe8!important}
-#nav button:nth-child(8n+2){background:#ede9fe!important;color:#6d28d9!important;border-color:#ddd6fe!important}
-#nav button:nth-child(8n+3){background:#ffedd5!important;color:#9a3412!important;border-color:#fed7aa!important}
-#nav button:nth-child(8n+4){background:#d1fae5!important;color:#065f46!important;border-color:#a7f3d0!important}
-#nav button:nth-child(8n+5){background:#dbeafe!important;color:#1d4ed8!important;border-color:#bfdbfe!important}
-#nav button:nth-child(8n+6){background:#fef3c7!important;color:#92400e!important;border-color:#fde68a!important}
-#nav button:nth-child(8n+7){background:#ffe4e6!important;color:#9f1239!important;border-color:#fecdd3!important}
-#nav button:nth-child(8n){background:#cffafe!important;color:#155e75!important;border-color:#a5f3fc!important}
-#nav button.active{outline:2px solid rgba(236,72,153,.28)!important;outline-offset:1px;filter:saturate(1.2)}
-.module-menu-card.tone-green{background:#d1fae5!important}.module-menu-card.tone-blue{background:#dbeafe!important}.module-menu-card.tone-orange{background:#ffedd5!important}.module-menu-card.tone-peach{background:#ffe4e6!important}.module-menu-card.tone-purple{background:#ede9fe!important}.module-menu-card.tone-cyan{background:#cffafe!important}.module-menu-card.tone-pink{background:#fce7f3!important}
-input:focus,select:focus,textarea:focus{border-color:#f472b6!important;box-shadow:0 0 0 3px rgba(244,114,182,.18)!important}
-th{background:#fce7f3!important;color:#831843!important}
-tbody tr:nth-child(odd) td,table tbody tr:nth-child(odd) td{background-color:#fff7fb}
-tbody tr:nth-child(even) td,table tbody tr:nth-child(even) td{background-color:#f5f0ff}
-tbody tr:hover td,table tbody tr:hover td{background-color:#fce7f3!important}
-.module-backbar .btn{background:#ede9fe!important;color:#6d28d9!important;border-color:#ddd6fe!important}
-@media(prefers-reduced-motion:reduce){button,.btn,.module-menu-card{transition:none!important}}
-</style>
-
-
-
-<!-- VISUAL-ONLY PATCH: TEAM AREA HALIMAH. No data/API/JavaScript/function changes. -->
-<style id="team-area-halimah-sidebar-visual-only">
-:root{
-  --bg:#e5e5e5;
-  --card:#ffffff;
-  --text:#253449;
-  --muted:#687b95;
-  --line:#d3d7dd;
-  --shadow:0 2px 8px rgba(0,0,0,.06);
-  --radius:4px;
-}
-html,body{max-width:100%;min-height:100%;overflow-x:hidden;background:#e5e5e5;color:#253449}
-body{font-family:Arial,Helvetica,sans-serif}
-#appView{min-height:100vh;background:#e5e5e5}
-.topbar{
-  position:sticky;top:0;left:0;width:100%;height:47px;min-height:47px;
-  z-index:100;background:#171717!important;color:#ffe000!important;
-  border:0!important;border-bottom:1px solid #333!important;border-radius:0!important;
-  padding:6px 18px!important;box-shadow:none!important;backdrop-filter:none!important
-}
-.topbar .brand{gap:10px}
-.topbar .logo{width:30px;height:30px;min-width:30px;border-radius:50%;font-size:17px;background:transparent!important;box-shadow:none!important}
-.topbar .brand h1{font-size:15px!important;font-weight:700;color:#ffe000!important;letter-spacing:.2px}
-.topbar .brand small{display:none!important}
-.topbar .userbox{margin-left:auto}
-.topbar .userpill{padding:0!important;border:0!important;background:transparent!important;color:#ffe000!important;font-size:11px!important;border-radius:0!important}
-.page{max-width:none!important;margin:0!important;padding:20px 24px 28px 224px!important;min-height:calc(100vh - 47px);background:#e5e5e5}
-#nav.nav{
-  position:fixed!important;top:47px!important;left:0!important;bottom:0!important;
-  width:200px!important;height:calc(100vh - 47px)!important;z-index:90;
-  display:flex!important;flex-direction:column!important;align-items:stretch!important;
-  gap:4px!important;overflow-x:hidden!important;overflow-y:auto!important;
-  padding:24px 9px 18px!important;margin:0!important;
-  background:#633d45!important;border:0!important;border-radius:0!important;box-shadow:none!important;
-  scrollbar-width:thin;scrollbar-color:#b4a0a3 #633d45
-}
-#nav.nav:before{content:"MENU UTAMA";display:block;color:#f4dfe4;font-size:10px;font-weight:800;letter-spacing:1.3px;padding:0 11px 10px}
-#nav.nav button{
-  display:flex!important;align-items:center!important;justify-content:flex-start!important;
-  width:100%!important;min-height:43px!important;white-space:normal!important;text-align:left!important;
-  border:0!important;border-radius:5px!important;padding:11px 12px!important;margin:0!important;
-  background:#f4f4f4!important;color:#253449!important;font-size:13px!important;font-weight:600!important;
-  box-shadow:none!important;transform:none!important;transition:background .15s ease!important
-}
-#nav.nav button[data-page="dashboard"]{background:#f4e7eb!important;color:#5a2735!important;border-left:4px solid #ffdf00!important}
-#nav.nav button[data-page="sales"]{background:#dff4e9!important;color:#185d46!important}
-#nav.nav button[data-page="waste"]{background:#fff0d7!important;color:#8a4c00!important}
-#nav.nav button[data-page="maintenance"]{background:#fbe1df!important;color:#8a342d!important}
-#nav.nav button[data-page="kpi"]{background:#e9e2fb!important;color:#51409a!important}
-#nav.nav button[data-page="walkthrough"]{background:#fff0d7!important;color:#8a4c00!important}
-#nav.nav button[data-page="smallware"]{background:#e7e2fb!important;color:#51409a!important}
-#nav.nav button[data-page="soldout"]{background:#fbe1df!important;color:#8a342d!important}
-#nav.nav button:hover{filter:brightness(.97)!important}
-#nav.nav button.active,#nav.nav button[aria-current="page"]{outline:2px solid rgba(255,223,0,.65)!important;outline-offset:-2px}
-.page-section{min-width:0}
-.hero{border:1px solid #d0d0d0!important;border-radius:4px!important;background:#e9e9e9!important;box-shadow:none!important;padding:18px 20px!important;margin:0 0 18px!important}
-.hero h2{color:#222!important}
-.store-only-note{border:1px solid #d0d0d0!important;border-radius:4px!important;background:#f8f8f8!important;color:#53657d!important;box-shadow:none!important}
-.card,.panel,.dashboard-card,.stat-card,.module-card,.table-wrap,.section-card{border-radius:4px!important;box-shadow:none!important;border:1px solid #d0d0d0!important}
-input,select,textarea{border-radius:4px!important}
-button.btn,.btn{border-radius:4px!important}
-table{border-collapse:collapse}
-thead th{background:#d0d0d0!important;color:#111!important}
-tbody tr:nth-child(even){background:#edf3fa}
-@media(max-width:760px){
-  .topbar{height:47px!important;min-height:47px!important;padding:6px 10px!important}
-  .topbar .brand h1{font-size:13px!important}
-  #nav.nav{width:154px!important;padding:18px 7px!important}
-  #nav.nav button{font-size:12px!important;padding:10px 8px!important;min-height:40px!important}
-  .page{padding:14px 10px 22px 164px!important}
-}
-@media(max-width:480px){
-  #nav.nav{width:126px!important;padding:14px 5px!important}
-  #nav.nav button{font-size:11px!important;padding:9px 6px!important}
-  .page{padding:12px 8px 18px 134px!important}
-  .topbar .logo{display:none!important}
-}
 </style>
 
 </body>
