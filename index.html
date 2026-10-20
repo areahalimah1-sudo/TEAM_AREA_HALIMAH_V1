@@ -1236,48 +1236,36 @@ function isAM(){
 
 const WT_AM_API_URL = 'https://script.google.com/macros/s/AKfycbwA2fvkfBXDeDZpIPq5Gbwyp-VKImCYzibIhcoLkYu6lf3a7LlYsgU_ksAu3rjfFt7h/exec';
 
-// KONEKSI KHUSUS SOLD OUT — TIDAK MENGGUNAKAN BACKEND CONTROL AREA HALIMAH.
-// Setelah deploy Apps Script konektor Sold Out mandiri, isi URL Web App di bawah.
+// KONEKSI SOLD OUT LANGSUNG KE GOOGLE SHEETS. Modul lain tetap memakai backend WT_AM_API_URL.
 const SOLDOUT_API_URL = 'https://docs.google.com/spreadsheets/d/1b5OZmSRUo8HDzjpNPRlxCiBLVAzDvFP8CwP3mELWVog/gviz/tq?tqx=out:json&sheet=HISTORY%20BASE';
-
 function parseGvizSoldOut_(raw){
-  const start=raw.indexOf('{'), end=raw.lastIndexOf('}');
-  if(start<0||end<=start) throw new Error('Google Sheets tidak mengembalikan data JSON. Pastikan tab dipublikasikan atau akses link aktif.');
+  const start=raw.indexOf('{'),end=raw.lastIndexOf('}');
+  if(start<0||end<=start)throw new Error('Google Sheets tidak mengembalikan data. Pastikan spreadsheet dapat dibaca melalui link.');
   const payload=JSON.parse(raw.slice(start,end+1));
-  if(payload.status&&payload.status!=='ok') throw new Error('Google Sheets menolak akses ke tab Sold Out.');
+  if(payload.status&&payload.status!=='ok')throw new Error('Google Sheets menolak akses ke tab HISTORY BASE.');
   const cols=(payload.table?.cols||[]).map(c=>String(c.label||c.id||'').trim());
   return (payload.table?.rows||[]).map(row=>{const o={};(row.c||[]).forEach((c,i)=>o[cols[i]||('COL_'+i)]=c?(c.f!=null?c.f:c.v):'');return o;});
 }
 function soldOutNorm_(s){return String(s==null?'':s).trim().toUpperCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');}
 function soldOutDateKey_(v){
-  if(v==null||v==='')return ''; const s=String(v).trim(); let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
-  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
-  if(m)return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+  if(v==null||v==='')return '';
+  if(typeof v==='number'&&Number.isFinite(v)){const d=new Date(Date.UTC(1899,11,30)+Math.floor(v)*86400000);return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);}
+  const s=String(v).trim();let m=s.match(/^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)$/i);
+  if(m)return m[1]+'-'+('0'+(Number(m[2])+1)).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);if(m)return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
   const d=new Date(s);return isNaN(d.getTime())?'':d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
 }
 function soldOutLongestStreak_(dates){if(!dates.length)return 0;let best=1,run=1;for(let i=1;i<dates.length;i++){const a=new Date(dates[i-1]+'T00:00:00Z'),b=new Date(dates[i]+'T00:00:00Z');if(b-a===86400000)run++;else run=1;if(run>best)best=run;}return best;}
 async function soldOutApiGet(params={}){
   const url=new URL(SOLDOUT_API_URL);url.searchParams.set('tqx','out:json');url.searchParams.set('sheet','HISTORY BASE');url.searchParams.set('_ts',String(Date.now()));
-  const response=await fetch(url.toString(),{method:'GET',cache:'no-store'});
-  if(!response.ok)throw new Error('Gagal membaca Google Sheets Sold Out ('+response.status+').');
+  const response=await fetch(url.toString(),{method:'GET',cache:'no-store'});if(!response.ok)throw new Error('Gagal membaca Google Sheets Sold Out ('+response.status+').');
   const rows=parseGvizSoldOut_(await response.text());
   const pick=(row,aliases)=>{for(const a of aliases){const k=Object.keys(row).find(x=>soldOutNorm_(x)===soldOutNorm_(a));if(k!==undefined)return row[k];}return '';};
-  const storeFilter=soldOutNorm_(params.store||'ALL'), from=String(params.from||''), to=String(params.to||'');
-  const rawData=rows.map(row=>({
-    store:String(pick(row,['NAMA STORE','STORE','STORE NAME'])||'').trim(),
-    tanggal:soldOutDateKey_(pick(row,['TANGGAL','DATE','TGL'])),
-    kodeMaterial:String(pick(row,['KODE MATERIAL','KODE BARANG','MATERIAL CODE'])||'').trim(),
-    namaBarang:String(pick(row,['NAMA MATERIAL','NAMA BARANG','NAMA ITEM','MATERIAL NAME'])||'').trim(),
-    kodeMenu:String(pick(row,['KODE MENU'])||''),namaMenu:String(pick(row,['NAMA MENU'])||''),
-    lastTrade:String(pick(row,['LAST TRADE'])||''),soldout:String(pick(row,['SOLDOUT','SOLD OUT'])||''),
-    expired:String(pick(row,['EXPIRED HT'])||''),koreksi:String(pick(row,['KOREKSI'])||''),isp:String(pick(row,['ISP'])||''),
-    keterangan:String(pick(row,['KETERANGAN / ACTION','PENYEBAB SOLD OUT','PENYEBAB'])||'')
-  })).filter(x=>x.store&&x.tanggal&&(x.kodeMaterial||x.namaBarang))
-    .filter(x=>storeFilter==='ALL'||soldOutNorm_(x.store)===storeFilter)
-    .filter(x=>(!from||x.tanggal>=from)&&(!to||x.tanggal<=to));
-  const grouped=new Map();rawData.forEach(x=>{const k=soldOutNorm_(x.store)+'||'+(x.kodeMaterial||x.namaBarang);if(!grouped.has(k))grouped.set(k,{store:x.store,kodeMaterial:x.kodeMaterial,namaBarang:x.namaBarang,dates:new Set(),soTerakhir:x.tanggal});const g=grouped.get(k);g.dates.add(x.tanggal);if(x.tanggal>g.soTerakhir)g.soTerakhir=x.tanggal;});
-  const data=Array.from(grouped.values()).map(g=>{const dates=Array.from(g.dates).sort(),longestStreak=soldOutLongestStreak_(dates),totalHariSO=dates.length;const priority=(longestStreak>=5||totalHariSO>=10)?'CRITICAL':(longestStreak>=3||totalHariSO>=6)?'HIGH':totalHariSO>=3?'MONITOR':'NORMAL';const periods=[];if(dates.length){let start=dates[0],prev=dates[0],days=1;for(let i=1;i<dates.length;i++){const a=new Date(prev+'T00:00:00Z'),b=new Date(dates[i]+'T00:00:00Z');if(b-a===86400000){days++;}else{periods.push({start,end:prev,days});start=dates[i];days=1;}prev=dates[i];}periods.push({start,end:prev,days});}return {store:g.store,kodeMaterial:g.kodeMaterial,namaBarang:g.namaBarang,totalHariSO,soTerakhir:g.soTerakhir,periodeSO:periods,longestStreak,priority};}).sort((a,b)=>(({CRITICAL:0,HIGH:1,MONITOR:2,NORMAL:3}[a.priority])-({CRITICAL:0,HIGH:1,MONITOR:2,NORMAL:3}[b.priority]))||b.totalHariSO-a.totalHariSO||a.namaBarang.localeCompare(b.namaBarang)).slice(0,Number(params.limit)||5000);
+  const sf=soldOutNorm_(params.store||'ALL'),from=String(params.from||''),to=String(params.to||'');
+  const raw=rows.map(row=>({store:String(pick(row,['NAMA STORE','STORE','STORE NAME'])||'').trim(),tanggal:soldOutDateKey_(pick(row,['TANGGAL','DATE','TGL'])),kodeMaterial:String(pick(row,['KODE MATERIAL','KODE BARANG','MATERIAL CODE','KODE ITEM'])||'').trim(),namaBarang:String(pick(row,['NAMA MATERIAL','NAMA BARANG','NAMA ITEM','MATERIAL NAME','ITEM NAME'])||'').trim()})).filter(x=>x.store&&x.tanggal&&(x.kodeMaterial||x.namaBarang)).filter(x=>sf==='ALL'||soldOutNorm_(x.store)===sf).filter(x=>(!from||x.tanggal>=from)&&(!to||x.tanggal<=to));
+  const groups=new Map();raw.forEach(x=>{const k=soldOutNorm_(x.store)+'||'+(x.kodeMaterial||x.namaBarang);if(!groups.has(k))groups.set(k,{store:x.store,kodeMaterial:x.kodeMaterial,namaBarang:x.namaBarang,dates:new Set(),soTerakhir:x.tanggal});const g=groups.get(k);g.dates.add(x.tanggal);if(x.tanggal>g.soTerakhir)g.soTerakhir=x.tanggal;if(!g.namaBarang&&x.namaBarang)g.namaBarang=x.namaBarang;});
+  const data=Array.from(groups.values()).map(g=>{const dates=Array.from(g.dates).sort(),longestStreak=soldOutLongestStreak_(dates),totalHariSO=dates.length,periodeSO=[];if(dates.length){let start=dates[0],prev=dates[0],days=1;for(let i=1;i<dates.length;i++){if(new Date(dates[i]+'T00:00:00Z')-new Date(prev+'T00:00:00Z')===86400000)days++;else{periodeSO.push({start,end:prev,days});start=dates[i];days=1;}prev=dates[i];}periodeSO.push({start,end:prev,days});}const priority=(longestStreak>=5||totalHariSO>=10)?'CRITICAL':(longestStreak>=3||totalHariSO>=6)?'HIGH':totalHariSO>=3?'MONITOR':'NORMAL';return {store:g.store,kodeMaterial:g.kodeMaterial,namaBarang:g.namaBarang,totalHariSO,soTerakhir:g.soTerakhir,periodeSO,longestStreak,priority};}).sort((a,b)=>({CRITICAL:0,HIGH:1,MONITOR:2,NORMAL:3}[a.priority]-{CRITICAL:0,HIGH:1,MONITOR:2,NORMAL:3}[b.priority])||b.totalHariSO-a.totalHariSO||a.namaBarang.localeCompare(b.namaBarang)).slice(0,Number(params.limit)||5000);
   return {success:true,data,summary:{totalItems:new Set(data.map(x=>x.kodeMaterial||x.namaBarang)).size,totalStoreItems:data.length,totalSoldOutDays:data.reduce((s,x)=>s+x.totalHariSO,0),critical:data.filter(x=>x.priority==='CRITICAL').length},source:'HISTORY BASE'};
 }
 
