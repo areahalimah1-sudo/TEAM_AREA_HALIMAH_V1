@@ -1910,62 +1910,29 @@ async function loadSoldOutSummary(){
   const body=document.getElementById('soldOutBody');
   if(!body)return;
   body.innerHTML='<tr><td colspan="8" class="empty">Memuat rekap Sold Out...</td></tr>';
-  ['soTotalItems','soStoreItems','soDays','soCritical'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.textContent='—';
-  });
   try{
-    const filters={
+    const r=await apiGetFrom(SOLDOUT_API_URL,'soldoutSummary',{
       store:document.getElementById('soStore')?.value||'ALL',
       from:document.getElementById('soFrom')?.value||'',
       to:document.getElementById('soTo')?.value||'',
       limit:5000
-    };
-    const r=await apiGetFrom(SOLDOUT_API_URL,'soldoutSummary',filters);
-    if(!r || typeof r!=='object') throw new Error('API tidak mengembalikan objek data. Periksa URL Web App Sold Out.');
-    if(r.success===false) throw new Error(r.message||'API Sold Out mengembalikan status gagal.');
-    const payload=(r.result && typeof r.result==='object')?r.result:r;
-    const summary=payload.summary||{};
-    const rows=Array.isArray(payload.data)?payload.data:
-      Array.isArray(payload.rows)?payload.rows:
-      Array.isArray(payload.items)?payload.items:[];
-    const setStat=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=Number(value||0).toLocaleString('id-ID');};
-    setStat('soTotalItems',summary.totalItems!==undefined?summary.totalItems:rows.length);
-    setStat('soStoreItems',summary.totalStoreItems!==undefined?summary.totalStoreItems:rows.length);
-    setStat('soDays',summary.totalSoldOutDays!==undefined?summary.totalSoldOutDays:rows.reduce((sum,x)=>sum+Number(x.totalHariSO||0),0));
-    setStat('soCritical',summary.critical!==undefined?summary.critical:rows.filter(x=>String(x.priority||'').toUpperCase()==='CRITICAL').length);
-    if(!rows.length){
-      const d=payload.diagnostics||r.diagnostics||{};
-      const details=[];
-      if(d.sourceSheet||payload.source)details.push('Sumber: '+(d.sourceSheet||payload.source));
-      if(d.sourceRows!==undefined)details.push('Baris sumber: '+d.sourceRows);
-      if(d.rowsMatchingFilters!==undefined)details.push('Baris sesuai filter: '+d.rowsMatchingFilters);
-      if(d.storeFilter)details.push('Filter store: '+d.storeFilter);
-      const msg=details.length?'Tidak ada data Sold Out untuk filter ini. '+details.join(' · '):'API berhasil dihubungi, tetapi tidak ada data yang dikembalikan. Periksa sumber HISTORY BASE dan filter tanggal/store.';
-      body.innerHTML=`<tr><td colspan="8" class="empty">${escapeHtml(msg)}</td></tr>`;
-      return;
-    }
+    });
+    const summary=r.summary||{};
+    document.getElementById('soTotalItems').textContent=Number(summary.totalItems||0).toLocaleString('id-ID');
+    document.getElementById('soStoreItems').textContent=Number(summary.totalStoreItems||0).toLocaleString('id-ID');
+    document.getElementById('soDays').textContent=Number(summary.totalSoldOutDays||0).toLocaleString('id-ID');
+    document.getElementById('soCritical').textContent=Number(summary.critical||0).toLocaleString('id-ID');
+    const rows=Array.isArray(r.data)?r.data:[];
+    if(!rows.length){body.innerHTML='<tr><td colspan="8" class="empty">Tidak ada data Sold Out untuk filter ini.</td></tr>';return;}
     body.innerHTML=rows.map(x=>{
       const priority=String(x.priority||'NORMAL').toUpperCase();
       const colors={CRITICAL:'badge-danger',HIGH:'badge-warning',MONITOR:'badge-progress',NORMAL:'badge-success'};
       const badge=colors[priority]||'badge-progress';
-      let period=x.periodeSO||x.latestPeriod||'-';
-      if(Array.isArray(period)){
-        period=period.map(p=>{
-          if(typeof p==='string')return p;
-          if(!p||typeof p!=='object')return '';
-          const start=p.start||p.mulai||''; const end=p.end||p.akhir||'';
-          return start&&end?(start===end?start:start+' s/d '+end):(start||end||'');
-        }).filter(Boolean).join(', ')||'-';
-      }else if(period&&typeof period==='object'){
-        const start=period.start||period.mulai||''; const end=period.end||period.akhir||'';
-        period=start&&end?(start===end?start:start+' s/d '+end):(start||end||'-');
-      }
-      return `<tr><td><b>${escapeHtml(x.store||x.storeName||'-')}</b></td><td>${escapeHtml(x.kodeMaterial||x.kode||x.kodeBarang||'-')}</td><td>${escapeHtml(x.namaBarang||x.namaMaterial||x.item||'-')}</td><td>${Number(x.totalHariSO||x.totalSoldOutDays||0).toLocaleString('id-ID')}</td><td>${escapeHtml(x.soTerakhir||x.lastSoldOut||'-')}</td><td>${escapeHtml(period)}</td><td>${Number(x.longestStreak||x.streakTerlama||0).toLocaleString('id-ID')}</td><td><span class="badge ${badge}">${escapeHtml(priority)}</span></td></tr>`;
+      return `<tr><td><b>${escapeHtml(x.store||'-')}</b></td><td>${escapeHtml(x.kodeMaterial||x.kode||'-')}</td><td>${escapeHtml(x.namaBarang||'-')}</td><td>${Number(x.totalHariSO||0).toLocaleString('id-ID')}</td><td>${escapeHtml(x.soTerakhir||'-')}</td><td>${escapeHtml(x.periodeSO||'-')}</td><td>${Number(x.longestStreak||0).toLocaleString('id-ID')}</td><td><span class="badge ${badge}">${escapeHtml(priority)}</span></td></tr>`;
     }).join('');
   }catch(err){
-    const message=err&&err.message?err.message:String(err);
-    body.innerHTML=`<tr><td colspan="8" class="empty">Gagal memuat Sold Out: ${escapeHtml(message)}. Pastikan URL SOLDOUT_API_URL mengarah ke Web App yang memiliki action soldoutSummary dan aksesnya tersedia.</td></tr>`;
-    toast('Rekap Sold Out: '+message);
+    body.innerHTML=`<tr><td colspan="8" class="empty">Gagal memuat Sold Out: ${escapeHtml(err.message||String(err))}</td></tr>`;
+    toast('Rekap Sold Out: '+(err.message||err));
   }
 }
 
